@@ -57,8 +57,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ content: textResponse });
   } catch (error) {
     console.error("Analyze error:", error);
+    const errorMessage = (error as any)?.message || String(error);
     return NextResponse.json(
-      { error: error instanceof Error ? `API Error: ${error.message}` : "Failed to process request" },
+      { error: `API Error: ${errorMessage}` },
       { status: 500 }
     );
   }

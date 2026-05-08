@@ -232,8 +232,9 @@ When the user asks about a job, use these tools to provide structured analysis. 
     });
   } catch (error) {
     console.error('Chat error:', error);
+    const errorMessage = (error as any)?.message || String(error);
     return NextResponse.json(
-      { error: error instanceof Error ? `API Error: ${error.message}` : 'Failed to process request' },
+      { error: `API Error: ${errorMessage}` },
       { status: 500 }
     );
   }
