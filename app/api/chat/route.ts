@@ -157,7 +157,7 @@ When the user asks about a job, use these tools to provide structured analysis. 
     ];
 
     const response = await client.messages.create({
-      model: 'claude-3-5-sonnet-latest',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1024,
       system: systemPrompt,
       tools: tools,
@@ -211,7 +211,7 @@ When the user asks about a job, use these tools to provide structured analysis. 
       ];
 
       const finalMessage = await client.messages.create({
-        model: 'claude-3-5-sonnet-latest',
+        model: 'claude-3-5-sonnet-20241022',
         max_tokens: 1024,
         system: systemPrompt,
         messages: messagesWithTools,
