@@ -26,49 +26,22 @@ export async function POST(request: NextRequest) {
 
     const client = new Anthropic({ apiKey });
 
-    // Initial analysis mode
-    if (!question) {
-      const response = await client.messages.create({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
-        system: SYSTEM_PROMPT,
-        tools: tools,
-        messages: [
-          {
-            role: "user",
-            content: `Analyze this job description:\n\n${jd}\n\nUse all three tools to parse the role, analyze fit, and suggest projects.`,
-          },
-        ],
-      });
-
-      return NextResponse.json({ content: response.content });
-    }
-
-    // Follow-up chat mode (no tools)
-    if (!history) {
-      return NextResponse.json(
-        { error: "Message history required for follow-up" },
-        { status: 400 }
-      );
-    }
-
-    // Build analysis summary from history if available
-    // Look for any previous analysis results in the conversation
+    // Chat mode: respond to user questions
     const conversationMessages: Anthropic.MessageParam[] = [
-      ...history.map((msg: Message) => ({
+      ...(history || []).map((msg: Message) => ({
         role: msg.role as "user" | "assistant",
         content: msg.content,
       })),
       {
         role: "user" as const,
-        content: question,
+        content: question || jd,
       },
     ];
 
     const response = await client.messages.create({
       model: "claude-sonnet-4-20250514",
       max_tokens: 1024,
-      system: `${SYSTEM_PROMPT}\n\nHere is the job description being analyzed:\n${jd}`,
+      system: SYSTEM_PROMPT,
       messages: conversationMessages,
     });
 
