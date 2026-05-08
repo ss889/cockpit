@@ -44,7 +44,14 @@ export default function CockpitChat() {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to get response');
+        let errorMsg = 'Failed to get response';
+        try {
+          const errorData = await response.json();
+          if (errorData.error) errorMsg = errorData.error;
+        } catch (e) {
+          // ignore parse error
+        }
+        throw new Error(errorMsg);
       }
 
       const data = await response.json();
