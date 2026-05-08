@@ -233,7 +233,7 @@ When the user asks about a job, use these tools to provide structured analysis. 
   } catch (error) {
     console.error('Chat error:', error);
     return NextResponse.json(
-      { error: 'Failed to process request' },
+      { error: error instanceof Error ? `API Error: ${error.message}` : 'Failed to process request' },
       { status: 500 }
     );
   }

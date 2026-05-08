@@ -88,7 +88,7 @@ Return valid JSON only. No explanations.`,
   } catch (error) {
     console.error('Search error:', error);
     return Response.json(
-      { error: 'Search failed', jobs: [] },
+      { error: error instanceof Error ? `API Error: ${error.message}` : 'Search failed', jobs: [] },
       { status: 500 }
     );
   }
