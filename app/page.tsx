@@ -1,196 +1,166 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import Sidebar from '@/components/Sidebar';
-import JDInput from '@/components/JDInput';
-import AnalysisPanel from '@/components/AnalysisPanel';
-import ChatPanel from '@/components/ChatPanel';
-import SearchPanel from '@/components/SearchPanel';
-import TrackerPanel from '@/components/TrackerPanel';
-import { parseToolResults } from '@/lib/tools';
-import { AnalysisResult, Message } from '@/types';
+import { useState, useRef, useEffect } from 'react';
+import { Message } from '@/types';
 
-interface JobResult {
-  title: string;
-  company: string;
-  location: string;
-  description: string;
-  link: string;
-}
-
-interface TrackedJob {
-  id: string;
-  title: string;
-  company: string;
-  location: string;
-  link: string;
-  status: string;
-  savedAt: string;
-}
-
-export default function Home() {
-  const [activePanel, setActivePanel] = useState<'analyze' | 'search' | 'tracker'>('analyze');
-
-  // Analyze panel state
-  const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+export default function CockpitChat() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [jd, setJd] = useState('');
-  const [chatHistory, setChatHistory] = useState<Message[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Tracker panel state
-  const [trackedJobs, setTrackedJobs] = useState<TrackedJob[]>([]);
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  };
 
-  const handleAnalyze = useCallback(async (jobDescription: string) => {
-    setJd(jobDescription);
-    setAnalysis(null);
-    setError(null);
-    setChatHistory([]);
+  useEffect(() => {
+    scrollToBottom();
+  }, [messages]);
+
+  const handleSendMessage = async () => {
+    if (!input.trim()) return;
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: input,
+      timestamp: new Date().toISOString(),
+    };
+
+    setMessages([...messages, userMessage]);
+    setInput('');
     setIsLoading(true);
 
     try {
       const response = await fetch('/api/analyze', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jd: jobDescription }),
+        body: JSON.stringify({
+          jd: jd || input,
+          history: messages,
+          question: input,
+        }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to analyze job description');
+        throw new Error('Failed to get response');
       }
 
       const data = await response.json();
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: data.content || 'No response generated',
+        timestamp: new Date().toISOString(),
+      };
 
-      if (data.error) {
-        setError(data.error);
-        setIsLoading(false);
-        return;
+      setMessages((prev) => [...prev, assistantMessage]);
+      
+      // Store job descriptions for analysis
+      if (input.toLowerCase().includes('analyze') && input.length > 50) {
+        setJd(input);
       }
-
-      const result = parseToolResults(data.content);
-      setAnalysis(result);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : 'An error occurred';
-      setError(message);
-      console.error('Analyze error:', err);
+    } catch (error) {
+      const errorMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `Error: ${error instanceof Error ? error.message : 'An error occurred'}`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, errorMessage]);
     } finally {
       setIsLoading(false);
     }
-  }, []);
-
-  const handleSaveRole = useCallback(
-    (title: string) => {
-      if (!jd) return;
-      alert(`Role "${title}" saved successfully!`);
-    },
-    [jd]
-  );
-
-  const handleSendChatMessage = useCallback(
-    async (question: string): Promise<string> => {
-      try {
-        const response = await fetch('/api/analyze', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jd,
-            history: chatHistory,
-            question,
-          }),
-        });
-
-        if (!response.ok) {
-          throw new Error('Failed to send message');
-        }
-
-        const data = await response.json();
-
-        if (data.error) {
-          throw new Error(data.error);
-        }
-
-        return typeof data.content === 'string'
-          ? data.content
-          : data.content[0]?.text || 'No response';
-      } catch (err) {
-        const message = err instanceof Error ? err.message : 'An error occurred';
-        console.error('Chat error:', err);
-        throw new Error(message);
-      }
-    },
-    [jd, chatHistory]
-  );
-
-  const handleSaveJob = useCallback((job: JobResult) => {
-    const newJob: TrackedJob = {
-      id: crypto.randomUUID(),
-      ...job,
-      status: 'Saved',
-      savedAt: new Date().toISOString(),
-    };
-
-    const saved = localStorage.getItem('tracked_jobs');
-    const existing = saved ? JSON.parse(saved) : [];
-    const updated = [...existing, newJob];
-    localStorage.setItem('tracked_jobs', JSON.stringify(updated));
-    setTrackedJobs(updated);
-
-    alert(`${job.title} at ${job.company} saved to tracker!`);
-  }, []);
+  };
 
   return (
-    <div className="cockpit-layout">
-      <Sidebar activePanel={activePanel} onPanelChange={setActivePanel} />
+    <div className="cockpit-chat">
+      {/* Header */}
+      <header className="chat-header">
+        <div className="chat-branding">
+          <h1>Career Cockpit</h1>
+          <p>AI operator for job search, analysis, and tracking</p>
+        </div>
+      </header>
 
-      <main className="cockpit-main">
-        {/* Analyze Panel */}
-        {activePanel === 'analyze' && (
-          <div className="panel analyze-panel">
-            <div className="panel-content">
-              <div className="panel-left">
-                <JDInput
-                  onAnalyze={handleAnalyze}
-                  isLoading={isLoading}
-                  onSavedRoleClick={handleAnalyze}
-                />
-              </div>
-              <div className="panel-right">
-                {error && (
-                  <div className="error-message">
-                    {error}
-                  </div>
-                )}
-                <AnalysisPanel
-                  analysis={analysis}
-                  isLoading={isLoading}
-                  onSave={handleSaveRole}
-                />
-                {analysis && (
-                  <ChatPanel
-                    isEnabled={!!analysis && !isLoading}
-                    jd={jd}
-                    onSendMessage={handleSendChatMessage}
-                  />
-                )}
-              </div>
+      {/* Chat Container */}
+      <div className="chat-container">
+        {/* Welcome State */}
+        {messages.length === 0 ? (
+          <div className="welcome-state">
+            <h2>What can I help you with?</h2>
+            <p>Tell me about a job you want to analyze, search for roles, or track your applications.</p>
+            <div className="example-prompts">
+              <button
+                onClick={() => setInput('Analyze this job description: [paste job description]')}
+                className="example-prompt"
+              >
+                📋 Analyze a job description
+              </button>
+              <button
+                onClick={() => setInput('Search for AI engineer roles in SF')}
+                className="example-prompt"
+              >
+                🔍 Search for jobs
+              </button>
+              <button
+                onClick={() => setInput('Show me my tracked jobs')}
+                className="example-prompt"
+              >
+                💾 View saved jobs
+              </button>
+              <button
+                onClick={() => setInput('What skills should I focus on for ML engineering?')}
+                className="example-prompt"
+              >
+                🎯 Career advice
+              </button>
             </div>
           </div>
-        )}
-
-        {/* Search Panel */}
-        {activePanel === 'search' && (
-          <div className="panel search-panel-wrapper">
-            <SearchPanel onSaveJob={handleSaveJob} />
+        ) : (
+          <div className="messages-list">
+            {messages.map((msg, idx) => (
+              <div key={idx} className={`message ${msg.role}`}>
+                <div className="message-content">{msg.content}</div>
+              </div>
+            ))}
+            {isLoading && (
+              <div className="message assistant">
+                <div className="message-content">
+                  <span className="typing-indicator">
+                    <span></span><span></span><span></span>
+                  </span>
+                </div>
+              </div>
+            )}
+            <div ref={messagesEndRef} />
           </div>
         )}
+      </div>
 
-        {/* Tracker Panel */}
-        {activePanel === 'tracker' && (
-          <div className="panel tracker-panel-wrapper">
-            <TrackerPanel />
-          </div>
-        )}
-      </main>
+      {/* Input Area */}
+      <div className="chat-input-area">
+        <div className="input-wrapper">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            placeholder="Tell me what you want to analyze, search, or track..."
+            className="chat-input"
+            disabled={isLoading}
+          />
+          <button
+            onClick={handleSendMessage}
+            disabled={isLoading || !input.trim()}
+            className="send-button"
+          >
+            {isLoading ? '...' : 'Send'}
+          </button>
+        </div>
+        <p className="input-hint">Paste job descriptions, ask about roles, or discuss your career path</p>
+      </div>
     </div>
   );
 }
