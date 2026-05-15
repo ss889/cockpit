@@ -18,17 +18,40 @@ export default function CockpitChat() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.json') || file.name.endsWith('.csv')) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result as string;
-        setInput((prev) => prev + (prev ? '\n\n' : '') + `[File: ${file.name}]\n${text}`);
-      };
-      reader.readAsText(file);
-    } else {
-      alert('Currently only text files (.txt, .md, .csv) are supported for direct upload.');
+    setIsLoading(true);
+
+    try {
+      if (file.name.toLowerCase().endsWith('.pdf')) {
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        const response = await fetch('/api/parse-pdf', {
+          method: 'POST',
+          body: formData,
+        });
+        
+        if (!response.ok) throw new Error('Failed to parse PDF');
+        
+        const data = await response.json();
+        if (data.error) throw new Error(data.error);
+        
+        setInput((prev) => prev + (prev ? '\n\n' : '') + `[File: ${file.name}]\n${data.text}`);
+      } else if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.json') || file.name.endsWith('.csv')) {
+        const reader = new FileReader();
+        reader.onload = (event) => {
+          const text = event.target?.result as string;
+          setInput((prev) => prev + (prev ? '\n\n' : '') + `[File: ${file.name}]\n${text}`);
+        };
+        reader.readAsText(file);
+      } else {
+        alert('Currently only text files and PDFs are supported.');
+      }
+    } catch (err) {
+      alert('Error uploading file: ' + (err instanceof Error ? err.message : String(err)));
+    } finally {
+      setIsLoading(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
-    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const toggleTheme = () => {
@@ -188,7 +211,7 @@ export default function CockpitChat() {
             ref={fileInputRef} 
             onChange={handleFileUpload} 
             style={{ display: 'none' }} 
-            accept=".txt,.md,.json,.csv"
+            accept=".txt,.md,.json,.csv,.pdf"
           />
           <button 
             onClick={() => fileInputRef.current?.click()}
