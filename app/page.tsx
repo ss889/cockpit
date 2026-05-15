@@ -87,14 +87,26 @@ export default function CockpitChat() {
     setIsLoading(true);
 
     try {
-      const response = await fetch('/api/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      let endpoint = '/api/chat';
+      let requestBody: any = {
+        messages: messages,
+        userMessage: input,
+      };
+
+      // Use the specialized analyze endpoint if they specifically ask to analyze or if we have a JD context
+      if (input.toLowerCase().includes('analyze') || (jd && input.length > 50)) {
+        endpoint = '/api/analyze';
+        requestBody = {
           jd: jd || input,
           history: messages,
           question: input,
-        }),
+        };
+      }
+
+      const response = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
