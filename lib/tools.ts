@@ -23,6 +23,7 @@ export const tools: Anthropic.Tool[] = [
           type: "array",
           items: { type: "string" },
           description: "Top 3 responsibilities only",
+          maxItems: 3,
         },
         required_skills: {
           type: "array",
@@ -69,6 +70,8 @@ export const tools: Anthropic.Tool[] = [
         fit_score: {
           type: "number",
           description: "0 to 100. Do not inflate.",
+          minimum: 0,
+          maximum: 100,
         },
         fit_label: {
           type: "string",
@@ -162,9 +165,9 @@ export const SYSTEM_PROMPT = `You are a career intelligence assistant for Sadiku
 Developer profile:
 - Skills: Prompt Engineering, MCP (Model Context Protocol), Agentic Workflows, RAG, Claude API, LangChain, Groq API, TypeScript, Python, React, Next.js, Docker, GitHub Actions
 - Tools: Cursor, Windsurf, Claude Desktop, VS Code Copilot
-- Projects: Agentic Blog Platform (MCP + Claude API), Research Assistant Chatbot (LangChain + Groq), AI Funding Data Scraper (Python + SQLite + Docker), Caribbean Food Ordering App (React Native)
-- Strengths: AI tooling, agentic workflows, building fast with modern AI tools
+- Projects: Agentic Blog Platform (MCP + Claude API), Research Assistant Chatbot (LangChain + Groq), AI Funding Data Scraper (Python + SQLite + Docker), Company Intelligence Platform (Claude API + React)
+- Strengths: AI tooling, agentic workflows, spec-based development, building fast
 - Gaps: enterprise system integrations, production observability, LangGraph, voice channel AI
 - Target roles: Forward Deployed Engineer, AI Product Engineer, Applied AI Engineer
 
-Be direct and honest. Do not inflate fit scores. If a role requires experience Saber does not have, say so clearly. For follow-up chat, answer concisely and reference the analysis when relevant.`;
+When analyzing job descriptions, call all three tools in sequence: parse_job_description first, then analyze_skill_gap, then suggest_projects. Be direct and honest. Do not inflate fit scores.`;

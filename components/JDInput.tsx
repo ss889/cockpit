@@ -11,6 +11,7 @@ interface JDInputProps {
 const JDInput: React.FC<JDInputProps> = ({ onAnalyze, isLoading, onSavedRoleClick }) => {
   const [jd, setJd] = useState('');
   const [savedRoles, setSavedRoles] = useState<Array<{ id: string; title: string; jd: string; savedAt: string }>>([]);
+  const [delayMinutes, setDelayMinutes] = useState('15');
 
   // Load saved roles on mount
   useEffect(() => {
@@ -23,6 +24,71 @@ const JDInput: React.FC<JDInputProps> = ({ onAnalyze, isLoading, onSavedRoleClic
   const handleAnalyze = useCallback(async () => {
     await onAnalyze(jd);
   }, [jd, onAnalyze]);
+
+  const [enqueueing, setEnqueueing] = useState(false);
+  const [queuedJob, setQueuedJob] = useState<string | null>(null);
+  const [queuedResult, setQueuedResult] = useState<any>(null);
+
+  const handleEnqueue = useCallback(async () => {
+    setEnqueueing(true);
+    try {
+      const res = await fetch('/api/jobs/analyze', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jd }) });
+      const j = await res.json();
+      const id = j.job?.id || null;
+      setQueuedJob(id);
+      setQueuedResult(null);
+      if (id) {
+        // poll for result
+        const poll = setInterval(async () => {
+          const r = await fetch(`/api/jobs/result?id=${encodeURIComponent(id)}`);
+          if (r.ok) {
+            const body = await r.json();
+            setQueuedResult(body.result);
+            clearInterval(poll);
+          }
+        }, 3000);
+      }
+    } catch (e) {
+      console.error('Enqueue failed', e);
+    } finally {
+      setEnqueueing(false);
+    }
+  }, [jd]);
+
+  const handleSchedule = useCallback(async () => {
+    setEnqueueing(true);
+    try {
+      const minutes = Math.max(1, Number(delayMinutes) || 0);
+      const res = await fetch('/api/jobs/defer', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'analyze',
+          payload: { jd },
+          delayMinutes: minutes,
+          maxRetries: 2,
+        }),
+      });
+      const j = await res.json();
+      const id = j.job?.id || null;
+      setQueuedJob(id);
+      setQueuedResult(null);
+      if (id) {
+        const poll = setInterval(async () => {
+          const r = await fetch(`/api/jobs/result?id=${encodeURIComponent(id)}`);
+          if (r.ok) {
+            const body = await r.json();
+            setQueuedResult(body.result);
+            clearInterval(poll);
+          }
+        }, 3000);
+      }
+    } catch (e) {
+      console.error('Schedule failed', e);
+    } finally {
+      setEnqueueing(false);
+    }
+  }, [jd, delayMinutes]);
 
   const handleSaveRole = useCallback((title: string) => {
     const newRole = {
@@ -68,13 +134,56 @@ const JDInput: React.FC<JDInputProps> = ({ onAnalyze, isLoading, onSavedRoleClic
           />
         </div>
 
-        <button
-          onClick={handleAnalyze}
-          disabled={isLoading || !jd.trim()}
-          className="w-full px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-semibold rounded-lg transition-colors text-sm"
-        >
-          {isLoading ? 'Analyzing...' : 'Analyze Role'}
-        </button>
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button
+            onClick={handleAnalyze}
+            disabled={isLoading || !jd.trim()}
+            className="flex-1 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-semibold rounded-lg transition-colors text-sm"
+          >
+            {isLoading ? 'Analyzing...' : 'Analyze Role'}
+          </button>
+          <button
+            onClick={handleEnqueue}
+            disabled={enqueueing || !jd.trim()}
+            className="px-3 py-2 bg-emerald-600 hover:bg-emerald-700 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-semibold rounded-lg transition-colors text-sm"
+          >
+            {enqueueing ? 'Enqueuing...' : 'Enqueue Analyze'}
+          </button>
+        </div>
+
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
+          <label htmlFor="delayMinutes" className="uppercase tracking-wide font-semibold text-zinc-300">
+            Delay (min)
+          </label>
+          <input
+            id="delayMinutes"
+            type="number"
+            min={1}
+            value={delayMinutes}
+            onChange={(e) => setDelayMinutes(e.target.value)}
+            className="w-20 px-2 py-1 bg-zinc-800 border border-zinc-700 rounded text-zinc-100"
+          />
+          <button
+            onClick={handleSchedule}
+            disabled={enqueueing || !jd.trim()}
+            className="px-3 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-zinc-700 disabled:text-zinc-500 text-white font-semibold rounded-lg transition-colors text-sm"
+          >
+            {enqueueing ? 'Scheduling...' : 'Schedule Analyze'}
+          </button>
+        </div>
+        {queuedJob && (
+          <div style={{ marginTop: 8, fontSize: '0.9rem' }}>
+            <div>Queued job: <strong>{queuedJob}</strong></div>
+            {queuedResult ? (
+              <div style={{ marginTop: 6 }}>
+                <div style={{ fontWeight: 600 }}>Result preview</div>
+                <div style={{ fontSize: '0.85rem', marginTop: 4 }}>{queuedResult.text ? queuedResult.text.slice(0, 800) : JSON.stringify(queuedResult).slice(0, 800)}</div>
+              </div>
+            ) : (
+              <div style={{ marginTop: 6 }} className="text-xs text-zinc-400">Waiting for worker to finish...</div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Saved Roles */}

@@ -1,3 +1,35 @@
+# AI Career Cockpit
+
+Development notes and deployment instructions.
+
+Environment
+- `ANTHROPIC_API_KEY` — required for Anthropic API usage.
+- `OPENAI_API_KEY` — optional, required for embeddings (OpenAI).
+
+Worker
+- See DOCS/WORKER.md for production worker startup and environment details.
+
+Docker (build & run)
+
+Build image:
+
+```bash
+docker build -t ai-career-cockpit:latest .
+```
+
+Run (persist `data/`):
+
+```bash
+docker run --rm --name ai-career-cockpit -p 3000:3000 \
+  -e "ANTHROPIC_API_KEY=..." -e "OPENAI_API_KEY=..." \
+  -v $(pwd)/data:/app/data \
+  ai-career-cockpit:latest
+```
+
+Notes
+- The app uses SQLite (`better-sqlite3`) when available; `data/corpus.db` will be stored in the `data/` directory.
+- Use `/api/corpus` to add job descriptions and `/api/analyze` to run analysis (includes RAG automatically).
+- Trigger embedding backfill (computes embeddings for existing docs) via `POST /api/jobs/backfill`.
 # AI Career Intelligence Cockpit
 
 ## What This Is
@@ -127,6 +159,16 @@ Make sure to set the `ANTHROPIC_API_KEY` environment variable in Vercel's settin
 - `npm run build` - Build for production
 - `npm start` - Start production server
 - `npm run lint` - Run ESLint
+
+## Smoke Test
+
+With the app running locally, verify deferred job scheduling with:
+
+```bash
+npm run smoke:defer
+```
+
+Set `SMOKE_BASE_URL` if the app is not on `http://localhost:3000`.
 
 ## License
 

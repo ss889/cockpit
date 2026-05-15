@@ -1,9 +1,10 @@
 'use client';
 
+import Anthropic from '@anthropic-ai/sdk';
 import { AnalysisResult } from '@/types';
 
 interface AnalysisPanelProps {
-  analysis: AnalysisResult | null;
+  analysis: AnalysisResult | Anthropic.ContentBlock[] | null;
   isLoading: boolean;
   onSave?: (title: string) => void;
 }
@@ -23,6 +24,19 @@ const Pill: React.FC<{ children: React.ReactNode; variant: 'green' | 'orange' | 
   );
 };
 
+const isToolUseBlock = (block: Anthropic.ContentBlock): block is Anthropic.ToolUseBlock => {
+  return block.type === 'tool_use';
+};
+
+const getToolInput = <T,>(blocks: Anthropic.ContentBlock[] | null, name: string): T | null => {
+  if (!blocks) {
+    return null;
+  }
+
+  const block = blocks.find((entry) => isToolUseBlock(entry) && entry.name === name);
+  return block && isToolUseBlock(block) ? (block.input as T) : null;
+};
+
 const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSave }) => {
   if (isLoading) {
     return (
@@ -34,23 +48,35 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
     );
   }
 
-  if (!analysis || (!analysis.parsed && !analysis.gap && !analysis.projects)) {
+  const rawBlocks = Array.isArray(analysis) ? analysis : null;
+  const legacyAnalysis = Array.isArray(analysis) ? null : analysis;
+  const parsedRole = rawBlocks
+    ? getToolInput<any>(rawBlocks, 'parse_job_description')
+    : legacyAnalysis?.parsed;
+  const parsedGap = rawBlocks
+    ? getToolInput<any>(rawBlocks, 'analyze_skill_gap')
+    : legacyAnalysis?.gap;
+  const parsedProjects = rawBlocks
+    ? getToolInput<any>(rawBlocks, 'suggest_projects')
+    : legacyAnalysis?.projects;
+
+  if (!parsedRole && !parsedGap && !parsedProjects) {
     return null;
   }
 
   return (
     <div className="space-y-4">
       {/* Card 1: Role Overview */}
-      {analysis.parsed && (
+      {parsedRole && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
           <div className="mb-4">
             <h2 className="text-lg font-bold text-zinc-100 mb-2">
-              {analysis.parsed.job_title}
+              {parsedRole.job_title}
             </h2>
-            <p className="text-sm text-zinc-400 mb-3">{analysis.parsed.company}</p>
+            <p className="text-sm text-zinc-400 mb-3">{parsedRole.company}</p>
             <div className="flex gap-2 mb-4">
-              <Pill variant="indigo">{analysis.parsed.role_type}</Pill>
-              <Pill variant="zinc">{analysis.parsed.seniority}</Pill>
+              <Pill variant="indigo">{parsedRole.role_type}</Pill>
+              <Pill variant="zinc">{parsedRole.seniority}</Pill>
             </div>
           </div>
 
@@ -59,7 +85,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
               Top Responsibilities
             </h3>
             <ul className="space-y-1 text-sm text-zinc-300">
-              {analysis.parsed.top_responsibilities.map((resp, i) => (
+              {parsedRole.top_responsibilities.map((resp: string, i: number) => (
                 <li key={i} className="flex gap-2">
                   <span className="text-indigo-400">•</span>
                   <span>{resp}</span>
@@ -73,20 +99,20 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
               Required Skills
             </h3>
             <div className="flex flex-wrap gap-2 mb-4">
-              {analysis.parsed.required_skills.map((skill) => (
+              {parsedRole.required_skills.map((skill: string) => (
                 <Pill key={skill} variant="indigo">
                   {skill}
                 </Pill>
               ))}
             </div>
 
-            {analysis.parsed.preferred_skills.length > 0 && (
+            {parsedRole.preferred_skills.length > 0 && (
               <>
                 <h3 className="text-xs font-semibold text-zinc-400 mb-2 uppercase tracking-wide">
                   Preferred Skills
                 </h3>
                 <div className="flex flex-wrap gap-2">
-                  {analysis.parsed.preferred_skills.map((skill) => (
+                  {parsedRole.preferred_skills.map((skill: string) => (
                     <Pill key={skill} variant="zinc">
                       {skill}
                     </Pill>
@@ -99,14 +125,14 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
       )}
 
       {/* Card 2: Gap Analysis */}
-      {analysis.gap && (
+      {parsedGap && (
         <div className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
           <div className="mb-4">
             <div className="flex items-baseline gap-2 mb-4">
               <span className="text-4xl font-bold text-indigo-400">
-                {analysis.gap.fit_score}
+                {parsedGap.fit_score}
               </span>
-              <Pill variant="indigo">{analysis.gap.fit_label}</Pill>
+              <Pill variant="indigo">{parsedGap.fit_label}</Pill>
             </div>
           </div>
 
@@ -115,7 +141,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
               Matching Skills
             </h3>
             <div className="flex flex-wrap gap-2 mb-4">
-              {analysis.gap.matching_skills.map((skill) => (
+              {parsedGap.matching_skills.map((skill: string) => (
                 <Pill key={skill} variant="green">
                   {skill}
                 </Pill>
@@ -128,7 +154,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
               Gap Skills
             </h3>
             <div className="flex flex-wrap gap-2 mb-4">
-              {analysis.gap.gap_skills.map((skill) => (
+              {parsedGap.gap_skills.map((skill: string) => (
                 <Pill key={skill} variant="orange">
                   {skill}
                 </Pill>
@@ -141,16 +167,16 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
               Analysis
             </h3>
             <p className="text-sm text-zinc-300 leading-relaxed">
-              {analysis.gap.gap_summary}
+              {parsedGap.gap_summary}
             </p>
           </div>
         </div>
       )}
 
       {/* Card 3: Suggested Projects */}
-      {analysis.projects && (
+      {parsedProjects && (
         <div className="space-y-3">
-          {analysis.projects.projects.map((project, idx) => (
+          {parsedProjects.projects.map((project: any, idx: number) => (
             <div key={idx} className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-2">
@@ -169,7 +195,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
                   Skills Addressed
                 </h4>
                 <div className="flex flex-wrap gap-2">
-                  {project.skills_addressed.map((skill) => (
+                  {project.skills_addressed.map((skill: string) => (
                     <Pill key={skill} variant="indigo">
                       {skill}
                     </Pill>
@@ -186,9 +212,9 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
       )}
 
       {/* Save button */}
-      {analysis.parsed && onSave && (
+      {parsedRole && onSave && (
         <button
-          onClick={() => onSave(analysis.parsed!.job_title)}
+          onClick={() => onSave(parsedRole.job_title)}
           className="w-full px-4 py-2 bg-zinc-800 hover:bg-zinc-700 text-zinc-100 font-semibold rounded-lg transition-colors text-sm border border-zinc-700"
         >
           Save this role

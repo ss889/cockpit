@@ -58,7 +58,7 @@ export default function CockpitChat() {
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
-        content: data.content || 'No response generated',
+        content: data.text || (typeof data.content === 'string' ? data.content : 'No response generated'),
         timestamp: new Date().toISOString(),
       };
 

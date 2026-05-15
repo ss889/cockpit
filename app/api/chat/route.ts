@@ -1,5 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { NextRequest, NextResponse } from 'next/server';
+import { getSystemPrompt } from '@/lib/promptStore';
 
 interface ParsedJD {
   role: string;
@@ -60,13 +61,8 @@ function parseJobDescription(jobDescription: string): ParsedJD {
   const role = roleMatch ? roleMatch[1].trim() : 'AI Engineer';
 
   // Extract skills mentioned in the JD
-  const skillPatterns = [
-    /(?:required|must have|needed)[:\s]*([^.]+(?:skills|experience)?)/gi,
-    /(?:Python|TypeScript|JavaScript|React|Next\.js|Node\.js|Docker|Kubernetes|AWS|GCP|Azure|PostgreSQL|MongoDB|LangChain|Claude|OpenAI|Vector DB|MCP)/gi,
-  ];
-
   const skills: string[] = [];
-  jobDescription.match(/(?:Python|TypeScript|JavaScript|React|Next\.js|Node\.js|Docker|Kubernetes|AWS|GCP|Azure|PostgreSQL|MongoDB|LangChain|Claude|OpenAI|GPT|Vector DB|MCP|RAG|Anthropic)/gi)?.forEach(skill => {
+  jobDescription.match(/(?:Python|TypeScript|JavaScript|React|Next\.js|Node\.js|Docker|Kubernetes|AWS|GCP|Azure|PostgreSQL|MongoDB|LangChain|Claude|OpenAI|GPT|Vector DB|MCP|RAG|Anthropic)/gi)?.forEach((skill) => {
     if (!skills.includes(skill)) {
       skills.push(skill);
     }
@@ -133,16 +129,9 @@ export async function POST(request: NextRequest) {
       apiKey,
     });
 
-    // Build the system prompt
-    const systemPrompt = `You are an AI career intelligence assistant helping engineers understand job requirements and plan their skill development.
-
-${jobDescription ? `The user has provided this job description:\n${jobDescription}\n\nUse this to provide targeted, specific advice.` : 'Help the user analyze job descriptions and identify skill gaps.'}
-
-You have access to tools that can:
-1. Parse job descriptions to extract key requirements
-2. Analyze skill gaps between the job and typical AI engineer profiles
-
-When the user asks about a job, use these tools to provide structured analysis. Be specific, actionable, and encouraging.`;
+    // Build the system prompt from the editable prompt store
+    const systemPromptBase = getSystemPrompt();
+    const systemPrompt = systemPromptBase + (jobDescription ? `\n\nUser job description provided:\n${jobDescription}` : '');
 
     // Convert messages to Anthropic format
     const conversationMessages = [
@@ -157,7 +146,7 @@ When the user asks about a job, use these tools to provide structured analysis. 
     ];
 
     const response = await client.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-sonnet-4-20250514',
       max_tokens: 1024,
       system: systemPrompt,
       tools: tools,
@@ -211,7 +200,7 @@ When the user asks about a job, use these tools to provide structured analysis. 
       ];
 
       const finalMessage = await client.messages.create({
-        model: 'claude-3-haiku-20240307',
+        model: 'claude-sonnet-4-20250514',
         max_tokens: 1024,
         system: systemPrompt,
         messages: messagesWithTools,
