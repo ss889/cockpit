@@ -219,6 +219,29 @@ body {
   box-shadow: 0 4px 12px rgba(0,0,0,0.12);
 }
 
+.attach-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #444746;
+  padding: 0.5rem;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.attach-button:hover:not(:disabled) {
+  background: #F0F4F9;
+  color: #1F1F1F;
+}
+
+.attach-button:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
 .chat-input {
   flex: 1;
   padding: 0.75rem 0;

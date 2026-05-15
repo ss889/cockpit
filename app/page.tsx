@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
+import { Plus } from 'lucide-react';
 
 export default function CockpitChat() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -9,6 +10,24 @@ export default function CockpitChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [jd, setJd] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.json') || file.name.endsWith('.csv')) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const text = event.target?.result as string;
+        setInput((prev) => prev + (prev ? '\n\n' : '') + `[File: ${file.name}]\n${text}`);
+      };
+      reader.readAsText(file);
+    } else {
+      alert('Currently only text files (.txt, .md, .csv) are supported for direct upload.');
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -149,6 +168,21 @@ export default function CockpitChat() {
       {/* Input Area */}
       <div className="chat-input-area">
         <div className="input-wrapper">
+          <input 
+            type="file" 
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            style={{ display: 'none' }} 
+            accept=".txt,.md,.json,.csv"
+          />
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="attach-button"
+            title="Attach a text file"
+            disabled={isLoading}
+          >
+            <Plus size={22} strokeWidth={2.5} />
+          </button>
           <input
             type="text"
             value={input}
