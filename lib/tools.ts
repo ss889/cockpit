@@ -1,4 +1,4 @@
-import Anthropic from "@anthropic-ai/sdk";
+import type * as Anthropic from "@anthropic-ai/sdk";
 import {
   ParseJobDescriptionOutput,
   AnalyzeSkillGapOutput,
@@ -6,7 +6,7 @@ import {
   AnalysisResult,
 } from "@/types";
 
-export const tools: Anthropic.Tool[] = [
+export const tools: any[] = [
   {
     name: "parse_job_description",
     description: "Extract structured role information from a job description",
@@ -131,7 +131,7 @@ export const tools: Anthropic.Tool[] = [
 ];
 
 export function parseToolResults(
-  content: Anthropic.ContentBlock[]
+  content: any[]
 ): AnalysisResult {
   const result: AnalysisResult = {
     parsed: null,

@@ -47,7 +47,7 @@ export async function runAnalyze(jd: string) {
 
   const parsedResults = parseToolResults(response.content);
   const textBlocks = response.content
-    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .filter((block: any): block is any => block.type === 'text')
     .map((block) => block.text.trim())
     .filter(Boolean);
 
@@ -88,7 +88,7 @@ export async function runAnalyze(jd: string) {
       });
 
       const swTextBlocks = swResp.content
-        .filter((b: any): b is Anthropic.TextBlock => b.type === 'text')
+        .filter((b: any): b is any => b.type === 'text')
         .map((b: any) => b.text.trim())
         .filter(Boolean);
 

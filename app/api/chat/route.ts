@@ -20,7 +20,7 @@ interface SkillGaps {
 }
 
 // Tool definitions for Claude
-const tools: Anthropic.Tool[] = [
+const tools: any[] = [
   {
     name: 'parse_job_description',
     description: 'Parses a job description and extracts key requirements like required skills, experience level, and role details',
@@ -159,7 +159,7 @@ export async function POST(request: NextRequest) {
     let assistantContent = '';
     const toolResults: Array<{ type: string; tool_use_id: string; content: string }> = [];
 
-    for (const block of response.content) {
+    for (const block of (response.content as any[])) {
       if (block.type === 'text') {
         assistantContent = block.text;
       } else if (block.type === 'tool_use') {

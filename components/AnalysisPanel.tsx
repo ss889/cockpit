@@ -1,10 +1,9 @@
-'use client';
+"use client";
 
-import Anthropic from '@anthropic-ai/sdk';
 import { AnalysisResult } from '@/types';
 
 interface AnalysisPanelProps {
-  analysis: AnalysisResult | Anthropic.ContentBlock[] | null;
+  analysis: AnalysisResult | any[] | null;
   isLoading: boolean;
   onSave?: (title: string) => void;
 }
@@ -24,11 +23,11 @@ const Pill: React.FC<{ children: React.ReactNode; variant: 'green' | 'orange' | 
   );
 };
 
-const isToolUseBlock = (block: Anthropic.ContentBlock): block is Anthropic.ToolUseBlock => {
+const isToolUseBlock = (block: any): block is any => {
   return block.type === 'tool_use';
 };
 
-const getToolInput = <T,>(blocks: Anthropic.ContentBlock[] | null, name: string): T | null => {
+const getToolInput = <T,>(blocks: any[] | null, name: string): T | null => {
   if (!blocks) {
     return null;
   }
