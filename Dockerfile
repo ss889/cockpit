@@ -55,9 +55,8 @@ COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlit
 COPY --from=builder /app/node_modules/bindings ./node_modules/bindings
 COPY --from=builder /app/node_modules/file-uri-to-path ./node_modules/file-uri-to-path
 
-# Persistent data directory (mounted as Railway volume)
+# /app/data is used for SQLite — attach a Railway Volume with mount path /app/data
 RUN mkdir -p /app/data
-VOLUME ["/app/data"]
 
 EXPOSE 3000
 ENV PORT=3000
@@ -80,5 +79,4 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npx tsc -p tsconfig.worker.json
 
-VOLUME ["/app/data"]
 CMD ["node", ".worker-dist/lib/worker.js", "loop"]
