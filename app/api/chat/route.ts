@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk';
 import '@/lib/patchAnthropicModel';
 import { createAnthropicClient } from '@/lib/anthropicClient';
 import { NextRequest, NextResponse } from 'next/server';
