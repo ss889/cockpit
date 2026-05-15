@@ -1,5 +1,5 @@
 import '@/lib/patchAnthropicModel';
-import Anthropic from '@anthropic-ai/sdk';
+import type * as Anthropic from '@anthropic-ai/sdk';
 import { createAnthropicClient } from '@/lib/anthropicClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSystemPrompt } from '@/lib/promptStore';
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    const model = (process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620').trim();
+    const model = (process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229').trim();
 
     const response = await client.messages.create({
       model,

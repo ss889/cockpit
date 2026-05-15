@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
 import './patchAnthropicModel';
+import type * as Anthropic from '@anthropic-ai/sdk';
 import { createAnthropicClient } from './anthropicClient';
 import { tools, parseToolResults } from './tools';
 import { getSystemPrompt } from './promptStore';
@@ -30,7 +30,7 @@ export async function runAnalyze(jd: string) {
 
   const systemPromptWithRag = getSystemPrompt() + (ragText ? '\n\n' + ragText : '');
 
-  const model = (process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620').trim();
+  const model = (process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229').trim();
 
   const response = await client.messages.create({
     model,
