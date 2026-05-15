@@ -1,3 +1,4 @@
+import Anthropic from '@anthropic-ai/sdk';
 import './patchAnthropicModel';
 import { createAnthropicClient } from './anthropicClient';
 import { tools, parseToolResults } from './tools';
@@ -67,6 +68,36 @@ export async function runAnalyze(jd: string) {
   const preamble = textBlocks.join('\n\n');
   const textResponse = [preamble, fallbackSummary].filter(Boolean).join('\n\n\n---\n\n\n') || 'Analysis complete.';
 
+  // Generate software/tooling suggestions for any suggested projects.
+  let softwareSuggestions: string | null = null;
+  try {
+    if (parsedResults.projects && Array.isArray(parsedResults.projects.projects) && parsedResults.projects.projects.length) {
+      const projectsForPrompt = parsedResults.projects.projects.map((p: any) => ({ title: p.title, description: p.description || p.summary || '' }));
+      const projectsJson = JSON.stringify(projectsForPrompt, null, 2);
+
+      const swResp = await client.messages.create({
+        model,
+        max_tokens: 800,
+        system: 'You are an assistant that lists the software, frameworks, libraries, and tools needed to build small projects. Return only JSON describing the required software for each project.',
+        messages: [
+          {
+            role: 'user',
+            content: `Given these projects extracted from a job description:\n\n${projectsJson}\n\nFor each project, produce a JSON object with project titles as keys and arrays of software/tool objects as values. Each software/tool object should include: name, category (IDE/language/framework/tool/database/cli/etc.), and an optional recommended_version or reason. Return only valid JSON.`,
+          },
+        ],
+      });
+
+      const swTextBlocks = swResp.content
+        .filter((b: any): b is Anthropic.TextBlock => b.type === 'text')
+        .map((b: any) => b.text.trim())
+        .filter(Boolean);
+
+      softwareSuggestions = swTextBlocks.join('\n\n') || null;
+    }
+  } catch (e) {
+    console.warn('Software suggestion generation failed:', e);
+  }
+
   try {
     saveJobDescription(jd, { analysis: parsedResults });
   } catch (e) {
@@ -78,5 +109,6 @@ export async function runAnalyze(jd: string) {
     text: textResponse,
     analysis: parsedResults,
     ragMatches,
+    softwareSuggestions,
   };
 }

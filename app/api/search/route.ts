@@ -1,8 +1,7 @@
-import Anthropic from '@anthropic-ai/sdk';
+import '@/lib/patchAnthropicModel';
+import { createAnthropicClient } from '@/lib/anthropicClient';
 
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+const anthropic = createAnthropicClient();
 
 interface JobResult {
   title: string;
@@ -30,8 +29,10 @@ export async function POST(req: Request) {
       );
     }
 
+      const model = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
+
       const response = await anthropic.messages.create({
-        model: 'claude-sonnet-4-20250514',
+        model,
       max_tokens: 2000,
       tools: [
         {
