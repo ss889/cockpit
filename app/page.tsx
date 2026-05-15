@@ -117,8 +117,8 @@ export default function CockpitChat() {
       {/* Header */}
       <header className="chat-header">
         <div className="chat-branding">
-          <h1>Career Cockpit</h1>
-          <p>AI operator for job search, analysis, and tracking</p>
+          <h1>JobOps AI</h1>
+          <p>Agentic intelligence for career navigation and analysis</p>
         </div>
         <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme">
           {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}

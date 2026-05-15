@@ -1,0 +1,17 @@
+[
+  {
+    "id": "1778875554899-jlv468h",
+    "type": "analyze",
+    "payload": {
+      "jd": "smoke test job"
+    },
+    "signature": "{\"type\":\"analyze\",\"payload\":{\"jd\":\"smoke test job\"}}",
+    "status": "failed",
+    "retries": 3,
+    "maxRetries": 2,
+    "createdAt": "2026-05-15T20:05:54.899Z",
+    "nextRun": "2026-05-15T20:24:31.059Z",
+    "lastError": "Error: API key not configured",
+    "finishedAt": "2026-05-15T20:24:31.101Z"
+  }
+]
