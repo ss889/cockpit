@@ -2,13 +2,15 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
-import { Plus } from 'lucide-react';
+import { Plus, Moon, Sun } from 'lucide-react';
 
 export default function CockpitChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [jd, setJd] = useState('');
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -27,6 +29,16 @@ export default function CockpitChat() {
       alert('Currently only text files (.txt, .md, .csv) are supported for direct upload.');
     }
     if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    if (newTheme === 'dark') {
+      document.documentElement.classList.add('theme-dark');
+    } else {
+      document.documentElement.classList.remove('theme-dark');
+    }
   };
 
   const scrollToBottom = () => {
@@ -108,6 +120,9 @@ export default function CockpitChat() {
           <h1>Career Cockpit</h1>
           <p>AI operator for job search, analysis, and tracking</p>
         </div>
+        <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme">
+          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+        </button>
       </header>
 
       {/* Chat Container */}
