@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
+import './patchAnthropicModel';
+import { createAnthropicClient } from './anthropicClient';
 import { tools, parseToolResults } from './tools';
 import { getSystemPrompt } from './promptStore';
 import { saveJobDescription, searchSimilar } from './database';
@@ -7,7 +8,7 @@ export async function runAnalyze(jd: string) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
   if (!apiKey) throw new Error('API key not configured');
 
-  const client = new Anthropic({ apiKey });
+  const client = createAnthropicClient();
 
   let ragMatches = [];
   try {
@@ -28,8 +29,10 @@ export async function runAnalyze(jd: string) {
 
   const systemPromptWithRag = getSystemPrompt() + (ragText ? '\n\n' + ragText : '');
 
+  const model = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
+
   const response = await client.messages.create({
-    model: 'claude-3-5-sonnet-20240620',
+    model,
     max_tokens: 2000,
     system: systemPromptWithRag,
     tools: tools,

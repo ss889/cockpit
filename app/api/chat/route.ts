@@ -1,4 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
+import '@/lib/patchAnthropicModel';
+import { createAnthropicClient } from '@/lib/anthropicClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSystemPrompt } from '@/lib/promptStore';
 
@@ -125,9 +126,7 @@ export async function POST(request: NextRequest) {
   try {
     const { messages, userMessage, jobDescription } = await request.json();
 
-    const client = new Anthropic({
-      apiKey,
-    });
+    const client = createAnthropicClient();
 
     // Build the system prompt from the editable prompt store
     const systemPromptBase = getSystemPrompt();
@@ -145,8 +144,10 @@ export async function POST(request: NextRequest) {
       },
     ];
 
+    const model = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
+
     const response = await client.messages.create({
-      model: 'claude-3-5-sonnet-20240620',
+      model,
       max_tokens: 1024,
       system: systemPrompt,
       tools: tools,
@@ -200,7 +201,7 @@ export async function POST(request: NextRequest) {
       ];
 
       const finalMessage = await client.messages.create({
-        model: 'claude-3-5-sonnet-20240620',
+        model,
         max_tokens: 1024,
         system: systemPrompt,
         messages: messagesWithTools,
