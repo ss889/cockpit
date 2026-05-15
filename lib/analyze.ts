@@ -29,7 +29,7 @@ export async function runAnalyze(jd: string) {
   const systemPromptWithRag = getSystemPrompt() + (ragText ? '\n\n' + ragText : '');
 
   const response = await client.messages.create({
-    model: 'claude-sonnet-4-20250514',
+    model: 'claude-3-5-sonnet-20241022',
     max_tokens: 2000,
     system: systemPromptWithRag,
     tools: tools,
@@ -61,7 +61,8 @@ export async function runAnalyze(jd: string) {
     .filter(Boolean)
     .join('\n\n');
 
-  const textResponse = textBlocks.join('\n\n') || fallbackSummary || 'Analysis complete.';
+  const preamble = textBlocks.join('\n\n');
+  const textResponse = [preamble, fallbackSummary].filter(Boolean).join('\n\n\n---\n\n\n') || 'Analysis complete.';
 
   try {
     saveJobDescription(jd, { analysis: parsedResults });
