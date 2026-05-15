@@ -1,5 +1,5 @@
-import Anthropic from '@anthropic-ai/sdk';
 import '@/lib/patchAnthropicModel';
+import Anthropic from '@anthropic-ai/sdk';
 import { createAnthropicClient } from '@/lib/anthropicClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSystemPrompt } from '@/lib/promptStore';
@@ -118,7 +118,7 @@ function analyzeSkillGaps(jobDescription: string): SkillGaps {
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim();
 
   if (!apiKey) {
     return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    const model = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
+    const model = (process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20240620').trim();
 
     const response = await client.messages.create({
       model,
@@ -188,16 +188,18 @@ export async function POST(request: NextRequest) {
     let finalResponse = assistantContent;
 
     if (toolResults.length > 0) {
-      // Add tool results to messages and get final response
+      // Add tool results text to the conversation and request a final response.
+      const toolResultsText = toolResults.map((r) => `Tool ${r.tool_use_id}:\n${r.content}`).join('\n\n');
+
       const messagesWithTools = [
         ...conversationMessages,
         {
           role: 'assistant' as const,
-          content: response.content,
+          content: assistantContent || '',
         },
         {
           role: 'user' as const,
-          content: toolResults,
+          content: `Here are the tool results:\n\n${toolResultsText}\n\nPlease produce a final assistant reply that incorporates these results.`,
         },
       ];
 
