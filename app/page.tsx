@@ -2,7 +2,9 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
-import { Plus, Moon, Sun } from 'lucide-react';
+import { Plus, Moon, Sun, User, ClipboardList } from 'lucide-react';
+import Link from 'next/link';
+import QuickCopyPanel from '@/components/QuickCopyPanel';
 
 // Convert URLs and markdown links in message text to clickable HTML
 function renderMessageContent(text: string): string {
@@ -37,6 +39,7 @@ export default function CockpitChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [jd, setJd] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [quickCopyOpen, setQuickCopyOpen] = useState(false);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -182,9 +185,17 @@ export default function CockpitChat() {
           <h1>JobOps AI</h1>
           <p>Agentic intelligence for career navigation and analysis</p>
         </div>
-        <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme">
-          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
-        </button>
+        <div className="header-actions">
+          <Link href="/profile" className="header-link" title="Edit Profile">
+            <User size={20} />
+          </Link>
+          <button onClick={() => setQuickCopyOpen(true)} className="header-link" title="Quick Apply Info">
+            <ClipboardList size={20} />
+          </button>
+          <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme">
+            {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+          </button>
+        </div>
       </header>
 
       {/* Chat Container */}
@@ -279,6 +290,11 @@ export default function CockpitChat() {
         </div>
         <p className="input-hint">Paste job descriptions, ask about roles, or discuss your career path</p>
       </div>
+
+      <QuickCopyPanel
+        isOpen={quickCopyOpen}
+        onClose={() => setQuickCopyOpen(false)}
+      />
     </div>
   );
 }
