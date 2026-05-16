@@ -119,6 +119,7 @@ function analyzeSkillGaps(jobDescription: string): SkillGaps {
 
 export async function POST(request: NextRequest) {
   const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim();
+  console.info('[chat] API Key check:', apiKey ? `${apiKey.slice(0, 10)}...${apiKey.slice(-5)}` : 'MISSING');
 
   if (!apiKey) {
     return NextResponse.json({ error: 'API key not configured' }, { status: 500 });
@@ -145,7 +146,7 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    const model = (process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229').trim();
+    const model = 'claude-3-5-sonnet-20240620';
 
     const response = await client.messages.create({
       model,

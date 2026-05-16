@@ -1,25 +1,19 @@
 import Anthropic from '@anthropic-ai/sdk';
 
+/**
+ * Creates an Anthropic client with explicit configuration to prevent environment injection issues.
+ */
 export function createAnthropicClient() {
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  const client = new Anthropic({ apiKey });
-  // Log client creation (debug only — safe to print model name but not API key)
-  // eslint-disable-next-line no-console
-  console.info('[anthropicClient] createAnthropicClient() created; ANTHROPIC_MODEL=', process.env.ANTHROPIC_MODEL || '<none>');
+  const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim();
+  
+  if (!apiKey) {
+    throw new Error('ANTHROPIC_API_KEY is not set');
+  }
 
-  // Wrap messages.create to enforce a single configurable model at runtime.
-  const messagesAny = (client as any).messages;
-  const originalCreate = messagesAny.create.bind(messagesAny);
-
-  messagesAny.create = function (params: any, options?: any) {
-    const configuredModel = process.env.ANTHROPIC_MODEL;
-    if (configuredModel) {
-      params = { ...params, model: configuredModel };
-    }
-    // eslint-disable-next-line no-console
-    console.info('[anthropicClient] messages.create called; using model=', params?.model || '<none>');
-    return originalCreate(params, options);
-  };
-
-  return client as unknown as InstanceType<typeof Anthropic>;
+  // Explicitly set the base URL to ensure we are hitting the real Anthropic API
+  // and not a potentially broken internal proxy or mock.
+  return new Anthropic({
+    apiKey: apiKey,
+    baseURL: 'https://api.anthropic.com',
+  });
 }

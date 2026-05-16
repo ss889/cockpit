@@ -30,7 +30,7 @@ export async function runAnalyze(jd: string) {
 
   const systemPromptWithRag = getSystemPrompt() + (ragText ? '\n\n' + ragText : '');
 
-  const model = (process.env.ANTHROPIC_MODEL || 'claude-3-sonnet-20240229').trim();
+  const model = 'claude-3-5-sonnet-20240620';
 
   const response = await client.messages.create({
     model,
