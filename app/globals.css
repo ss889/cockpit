@@ -417,6 +417,51 @@ body {
   font-weight: 700;
 }
 
+/* File Badge */
+.file-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--msg-assistant-bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+  margin-bottom: 0.75rem;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.file-badge-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.file-badge-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.file-badge-remove:hover {
+  background: rgba(255, 0, 0, 0.1);
+  color: #ef4444;
+}
+
 /* Header actions */
 .header-actions {
   display: flex;

@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
-import { Plus, Moon, Sun, User, ClipboardList } from 'lucide-react';
+import { Plus, Moon, Sun, User, ClipboardList, X } from 'lucide-react';
 import Link from 'next/link';
 import QuickCopyPanel from '@/components/QuickCopyPanel';
 
@@ -40,6 +40,7 @@ export default function CockpitChat() {
   const [jd, setJd] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [quickCopyOpen, setQuickCopyOpen] = useState(false);
+  const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -65,12 +66,12 @@ export default function CockpitChat() {
         const data = await response.json();
         if (data.error) throw new Error(data.error);
         
-        setInput((prev) => prev + (prev ? '\n\n' : '') + `[File: ${file.name}]\n${data.text}`);
+        setAttachedFile({ name: file.name, content: data.text });
       } else if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.json') || file.name.endsWith('.csv')) {
         const reader = new FileReader();
         reader.onload = (event) => {
           const text = event.target?.result as string;
-          setInput((prev) => prev + (prev ? '\n\n' : '') + `[File: ${file.name}]\n${text}`);
+          setAttachedFile({ name: file.name, content: text });
         };
         reader.readAsText(file);
       } else {
@@ -103,33 +104,44 @@ export default function CockpitChat() {
   }, [messages]);
 
   const handleSendMessage = async () => {
-    if (!input.trim()) return;
+    if (!input.trim() && !attachedFile) return;
+
+    // Build the visible message (what the user sees in chat)
+    const visibleContent = attachedFile 
+      ? `📎 ${attachedFile.name}${input.trim() ? '\n' + input : ''}`
+      : input;
+
+    // Build the full content sent to the AI (includes file text)
+    const fullContent = attachedFile
+      ? `[Attached file: ${attachedFile.name}]\n\n${attachedFile.content}${input.trim() ? '\n\n' + input : ''}`
+      : input;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: input,
+      content: visibleContent,
       timestamp: new Date().toISOString(),
     };
 
     setMessages([...messages, userMessage]);
     setInput('');
+    setAttachedFile(null);
     setIsLoading(true);
 
     try {
       let endpoint = '/api/chat';
       let requestBody: any = {
         messages: messages,
-        userMessage: input,
+        userMessage: fullContent,
       };
 
       // Use the specialized analyze endpoint if they specifically ask to analyze or if we have a JD context
-      if (input.toLowerCase().includes('analyze') || (jd && input.length > 50)) {
+      if (fullContent.toLowerCase().includes('analyze') || (jd && fullContent.length > 50)) {
         endpoint = '/api/analyze';
         requestBody = {
-          jd: jd || input,
+          jd: jd || fullContent,
           history: messages,
-          question: input,
+          question: fullContent,
         };
       }
 
@@ -161,8 +173,8 @@ export default function CockpitChat() {
       setMessages((prev) => [...prev, assistantMessage]);
       
       // Store job descriptions for analysis
-      if (input.toLowerCase().includes('analyze') && input.length > 50) {
-        setJd(input);
+      if (fullContent.toLowerCase().includes('analyze') && fullContent.length > 50) {
+        setJd(fullContent);
       }
     } catch (error) {
       const errorMessage: Message = {
@@ -255,6 +267,18 @@ export default function CockpitChat() {
 
       {/* Input Area */}
       <div className="chat-input-area">
+        {attachedFile && (
+          <div className="file-badge">
+            <span className="file-badge-name">📎 {attachedFile.name}</span>
+            <button 
+              className="file-badge-remove" 
+              onClick={() => setAttachedFile(null)}
+              title="Remove file"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
         <div className="input-wrapper">
           <input 
             type="file" 
@@ -282,7 +306,7 @@ export default function CockpitChat() {
           />
           <button
             onClick={handleSendMessage}
-            disabled={isLoading || !input.trim()}
+            disabled={isLoading || (!input.trim() && !attachedFile)}
             className="send-button"
           >
             {isLoading ? '...' : 'Send'}
