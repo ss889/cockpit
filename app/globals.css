@@ -389,3 +389,30 @@ body {
     grid-template-columns: 1fr;
   }
 }
+
+/* Clickable links in chat messages */
+.chat-link {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  word-break: break-all;
+  transition: color 0.2s ease, opacity 0.2s ease;
+}
+
+.chat-link:hover {
+  color: var(--accent-hover);
+  opacity: 0.85;
+}
+
+.message.user .chat-link {
+  color: var(--msg-user-text);
+  opacity: 0.9;
+}
+
+.message.user .chat-link:hover {
+  opacity: 1;
+}
+
+.message-content strong {
+  font-weight: 700;
+}

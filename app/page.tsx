@@ -4,6 +4,33 @@ import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
 import { Plus, Moon, Sun } from 'lucide-react';
 
+// Convert URLs and markdown links in message text to clickable HTML
+function renderMessageContent(text: string): string {
+  // Escape HTML first
+  let html = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  
+  // Convert markdown-style links [text](url)
+  html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, 
+    '<a href="$2" target="_blank" rel="noopener noreferrer" class="chat-link">$1</a>');
+  
+  // Convert remaining raw URLs to clickable links
+  html = html.replace(
+    /(?<!")(https?:\/\/[^\s<]+)/g, 
+    '<a href="$1" target="_blank" rel="noopener noreferrer" class="chat-link">$1</a>'
+  );
+  
+  // Convert newlines to <br> for proper formatting
+  html = html.replace(/\n/g, '<br>');
+  
+  // Convert **bold** to <strong>
+  html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+  
+  return html;
+}
+
 export default function CockpitChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -198,7 +225,7 @@ export default function CockpitChat() {
           <div className="messages-list">
             {messages.map((msg, idx) => (
               <div key={idx} className={`message ${msg.role}`}>
-                <div className="message-content">{msg.content}</div>
+                <div className="message-content" dangerouslySetInnerHTML={{ __html: renderMessageContent(msg.content) }} />
               </div>
             ))}
             {isLoading && (

@@ -54,6 +54,24 @@ const tools: any[] = [
       required: ['job_description'],
     },
   },
+  {
+    name: 'search_jobs',
+    description: 'Search for real job listings based on role titles, skills, or keywords extracted from a resume. Returns actual job postings with clickable links to apply. Use this when the user uploads a resume and asks what jobs they can apply to, or when they ask to search for specific roles.',
+    input_schema: {
+      type: 'object' as const,
+      properties: {
+        query: {
+          type: 'string',
+          description: 'Job search query — role title and/or key skills (e.g. "AI Engineer Python React")',
+        },
+        location: {
+          type: 'string',
+          description: 'Location to search in (e.g. "New York", "Remote", "San Francisco"). Defaults to United States.',
+        },
+      },
+      required: ['query'],
+    },
+  },
 ];
 
 // Mock implementation of parse_job_description
@@ -117,6 +135,60 @@ function analyzeSkillGaps(jobDescription: string): SkillGaps {
   };
 }
 
+// Search jobs using the internal API
+async function searchJobsForTool(query: string, location?: string): Promise<string> {
+  try {
+    // Call our own search-jobs API internally
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.VERCEL_URL || 'http://localhost:3000';
+    const url = baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`;
+    
+    const resp = await fetch(`${url}/api/search-jobs`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, location }),
+    });
+    
+    if (!resp.ok) throw new Error('Search failed');
+    
+    const data = await resp.json();
+    return JSON.stringify(data, null, 2);
+  } catch (e) {
+    // Fallback: return constructed search URLs directly
+    const encodedQuery = encodeURIComponent(query);
+    const encodedLocation = encodeURIComponent(location || 'United States');
+    const fallback = {
+      jobs: [
+        {
+          title: `${query} roles on LinkedIn`,
+          company: 'LinkedIn Jobs',
+          url: `https://www.linkedin.com/jobs/search/?keywords=${encodedQuery}&location=${encodedLocation}`,
+          source: 'LinkedIn',
+        },
+        {
+          title: `${query} roles on Indeed`,
+          company: 'Indeed',
+          url: `https://www.indeed.com/jobs?q=${encodedQuery}&l=${encodedLocation}`,
+          source: 'Indeed',
+        },
+        {
+          title: `${query} roles on Glassdoor`,
+          company: 'Glassdoor',
+          url: `https://www.glassdoor.com/Job/jobs.htm?sc.keyword=${encodedQuery}`,
+          source: 'Glassdoor',
+        },
+        {
+          title: `${query} roles on Wellfound`,
+          company: 'Wellfound',
+          url: `https://wellfound.com/jobs?query=${encodedQuery}`,
+          source: 'Wellfound',
+        },
+      ],
+      total: 4,
+    };
+    return JSON.stringify(fallback, null, 2);
+  }
+}
+
 export async function POST(request: NextRequest) {
   const apiKey = (process.env.ANTHROPIC_API_KEY || '').trim();
   console.info('[chat] API Key check:', apiKey ? `${apiKey.slice(0, 10)}...${apiKey.slice(-5)}` : 'MISSING');
@@ -150,7 +222,7 @@ export async function POST(request: NextRequest) {
 
     const response = await client.messages.create({
       model,
-      max_tokens: 1024,
+      max_tokens: 2048,
       system: systemPrompt,
       tools: tools,
       messages: conversationMessages,
@@ -175,6 +247,9 @@ export async function POST(request: NextRequest) {
           const input = block.input as { job_description: string; current_skills?: string[] };
           const gaps = analyzeSkillGaps(input.job_description);
           toolResult = JSON.stringify(gaps, null, 2);
+        } else if (block.name === 'search_jobs') {
+          const input = block.input as { query: string; location?: string };
+          toolResult = await searchJobsForTool(input.query, input.location);
         }
 
         toolResults.push({
