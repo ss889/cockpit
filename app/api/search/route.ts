@@ -29,7 +29,7 @@ export async function POST(req: Request) {
       );
     }
 
-      const model = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
+      const model = process.env.ANTHROPIC_MODEL || 'claude-3-5-sonnet-20241022';
 
       const response = await anthropic.messages.create({
         model,
