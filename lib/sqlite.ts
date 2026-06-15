@@ -1,8 +1,9 @@
 import path from 'path';
 import fs from 'fs';
+import { getDataDir } from './dataDir';
 let Database: any = null;
 
-const DB_PATH = path.join(process.cwd(), "data", "corpus.db");
+const DB_PATH = path.join(getDataDir(), "corpus.db");
 
 function ensureDir() {
   const dir = path.dirname(DB_PATH);

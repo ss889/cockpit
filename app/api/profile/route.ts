@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import fs from 'fs';
 import path from 'path';
+import { getDataDir } from '@/lib/dataDir';
 
-const PROFILE_PATH = path.join(process.cwd(), 'data', 'profile.json');
+const PROFILE_PATH = path.join(getDataDir(), 'profile.json');
 
 interface Profile {
   fullName: string;

@@ -1,8 +1,9 @@
 import fs from "fs";
 import path from "path";
+import { getDataDir } from "./dataDir";
 import * as sqliteHelper from "./sqlite";
 
-const DATA_DIR = path.join(process.cwd(), "data");
+const DATA_DIR = getDataDir();
 const CORPUS_FILE = path.join(DATA_DIR, "corpus.json");
 
 type CorpusEntry = {
