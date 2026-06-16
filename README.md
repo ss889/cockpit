@@ -28,7 +28,7 @@ This README focuses on what the project does, how it works, and how to run it lo
 - TypeScript
 - Tailwind CSS
 - Anthropic SDK (server-side for chat/tooling)
-- SQLite (`better-sqlite3`) for local persistence when enabled
+- File-backed local persistence for saved job data and corpus search
 
 ## Quickstart
 
@@ -58,7 +58,7 @@ docker run --rm --name ai-career-cockpit -p 3000:3000 \
 ```
 
 Notes:
-- The service uses `data/corpus.db` when SQLite is enabled; mounting `./data` keeps your state between runs.
+- Mounting `./data` keeps your local state between Docker runs.
 - Use `/api/corpus` to add job descriptions and `POST /api/jobs/analyze` to run analysis via the API.
 
 ## Project Structure
@@ -101,4 +101,3 @@ Deploy to Vercel or another Node-capable host. Ensure environment variables (at 
 ## License
 
 MIT
-

@@ -14,7 +14,6 @@
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.95.1",
-    "better-sqlite3": "^8.4.0",
     "lucide-react": "^1.14.0",
     "next": "16.2.6",
     "openai": "^4.28.0",
