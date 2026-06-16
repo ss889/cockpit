@@ -218,7 +218,7 @@ export async function POST(request: NextRequest) {
       },
     ];
 
-    const model = process.env.ANTHROPIC_MODEL || 'claude-3-haiku-20240307';
+    const model = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5';
 
     const response = await client.messages.create({
       model,
