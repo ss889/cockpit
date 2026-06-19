@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
-import type { QAIssue } from '@/types/profile';
+import type { QAIssue, ResumeProfile } from '@/types/profile';
 import { Plus, Moon, Sun, User, ClipboardList, X, FileText } from 'lucide-react';
 import Link from 'next/link';
 import QuickCopyPanel from '@/components/QuickCopyPanel';
@@ -50,6 +50,15 @@ export default function CockpitChat() {
   const [tailoredLatex, setTailoredLatex] = useState('');
   const [tailorKeywords, setTailorKeywords] = useState<string[]>([]);
   const [qaReport, setQaReport] = useState<{ before: QAIssue[]; after: QAIssue[]; autoFixed: boolean } | null>(null);
+  const [baseResumeProfile, setBaseResumeProfile] = useState<ResumeProfile | null>(() => {
+    if (typeof window === 'undefined') return null;
+    try {
+      const saved = window.localStorage.getItem('jobops_base_resume_profile');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -215,6 +224,8 @@ export default function CockpitChat() {
       if (!response.ok) throw new Error(data.error || 'Failed to ingest resume');
 
       setTailorStatus('idle');
+      setBaseResumeProfile(data.profile);
+      window.localStorage.setItem('jobops_base_resume_profile', JSON.stringify(data.profile));
       setTailorMessage(
         `Base profile saved: ${data.counts.projects} projects, ${data.counts.projectBullets} project bullets, ${data.counts.experience} experience entries, ${data.counts.experienceBullets} experience bullets.`
       );
@@ -236,7 +247,7 @@ export default function CockpitChat() {
       const response = await fetch('/api/tailor', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jd: tailorJd }),
+        body: JSON.stringify({ jd: tailorJd, profile: baseResumeProfile }),
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to tailor resume');

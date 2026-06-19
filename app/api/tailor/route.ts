@@ -20,12 +20,12 @@ interface RevisionToolOutput {
 
 export async function POST(request: NextRequest) {
   try {
-    const { jd } = await request.json();
+    const { jd, profile } = await request.json();
     if (!jd || typeof jd !== "string") {
       return NextResponse.json({ error: "Job description is required" }, { status: 400 });
     }
 
-    const baseProfile = getBaseProfile();
+    const baseProfile = isResumeProfile(profile) ? profile : getBaseProfile();
     if (!baseProfile) {
       return NextResponse.json(
         { error: "Set a base resume profile before tailoring. Paste your .tex resume in the Tailor Resume panel first." },
@@ -66,6 +66,18 @@ export async function POST(request: NextRequest) {
     const message = error instanceof Error ? error.message : "Failed to tailor resume";
     return NextResponse.json({ error: message }, { status: 500 });
   }
+}
+
+function isResumeProfile(value: unknown): value is ResumeProfile {
+  if (!value || typeof value !== "object") return false;
+  const profile = value as Partial<ResumeProfile>;
+  return (
+    !!profile.header &&
+    Array.isArray(profile.education) &&
+    Array.isArray(profile.skills) &&
+    Array.isArray(profile.projects) &&
+    Array.isArray(profile.experience)
+  );
 }
 
 async function tailorProfile(baseProfile: ResumeProfile, jd: string, keywords: string[]): Promise<ResumeProfile> {
