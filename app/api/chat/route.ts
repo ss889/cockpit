@@ -3,6 +3,7 @@ import type * as Anthropic from '@anthropic-ai/sdk';
 import { createAnthropicClient } from '@/lib/anthropicClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSystemPrompt } from '@/lib/promptStore';
+import { getBaseProfile } from '@/lib/database';
 
 interface ParsedJD {
   role: string;
@@ -204,7 +205,11 @@ export async function POST(request: NextRequest) {
 
     // Build the system prompt from the editable prompt store
     const systemPromptBase = getSystemPrompt();
-    const systemPrompt = systemPromptBase + (jobDescription ? `\n\nUser job description provided:\n${jobDescription}` : '');
+    const baseProfile = getBaseProfile();
+    const resumeContext = baseProfile
+      ? `\n\nActive base resume profile for resume tailoring and career questions:\n${JSON.stringify(baseProfile, null, 2)}`
+      : '';
+    const systemPrompt = systemPromptBase + resumeContext + (jobDescription ? `\n\nUser job description provided:\n${jobDescription}` : '');
 
     // Convert messages to Anthropic format
     const conversationMessages = [

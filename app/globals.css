@@ -417,6 +417,134 @@ body {
   font-weight: 700;
 }
 
+/* Resume Tailoring */
+.tailor-panel {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.tailor-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.tailor-panel-header h2 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  color: var(--text-primary);
+  margin-bottom: 0.25rem;
+}
+
+.tailor-panel-header p,
+.tailor-results p {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+}
+
+.tailor-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.tailor-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.tailor-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tailor-field span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+}
+
+.tailor-field textarea {
+  width: 100%;
+  min-height: 170px;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  resize: vertical;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.tailor-field textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.tailor-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.tailor-actions button {
+  padding: 0.65rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.tailor-actions button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.tailor-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.tailor-status,
+.tailor-results {
+  margin-top: 0.9rem;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--msg-assistant-bg);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.tailor-status.error {
+  border-color: #ef4444;
+  color: #b91c1c;
+  background: rgba(239, 68, 68, 0.08);
+}
+
 /* File Badge */
 .file-badge {
   display: inline-flex;
@@ -760,6 +888,14 @@ body {
 }
 
 @media (max-width: 640px) {
+  .tailor-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .tailor-actions {
+    flex-direction: column;
+  }
+
   .form-grid {
     grid-template-columns: 1fr;
   }

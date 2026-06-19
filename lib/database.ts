@@ -2,9 +2,11 @@ import fs from "fs";
 import path from "path";
 import { getDataDir } from "./dataDir";
 import * as sqliteHelper from "./sqlite";
+import type { ResumeProfile } from "@/types/profile";
 
 const DATA_DIR = getDataDir();
 const CORPUS_FILE = path.join(DATA_DIR, "corpus.json");
+const BASE_PROFILE_FILE = path.join(DATA_DIR, "base-profile.json");
 
 type CorpusEntry = {
   id: string;
@@ -31,6 +33,26 @@ function readAll(): CorpusEntry[] {
 function writeAll(items: CorpusEntry[]) {
   ensureDataDir();
   fs.writeFileSync(CORPUS_FILE, JSON.stringify(items, null, 2));
+}
+
+export function saveBaseProfile(profile: ResumeProfile): void {
+  ensureDataDir();
+  fs.writeFileSync(
+    BASE_PROFILE_FILE,
+    JSON.stringify({ profile, updatedAt: new Date().toISOString() }, null, 2)
+  );
+}
+
+export function getBaseProfile(): ResumeProfile | null {
+  try {
+    ensureDataDir();
+    if (!fs.existsSync(BASE_PROFILE_FILE)) return null;
+    const raw = fs.readFileSync(BASE_PROFILE_FILE, "utf8");
+    const parsed = JSON.parse(raw || "{}");
+    return parsed.profile ?? null;
+  } catch (e) {
+    return null;
+  }
 }
 
 export function saveJobDescription(text: string, meta?: Record<string, any>) {

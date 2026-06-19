@@ -2,7 +2,8 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
-import { Plus, Moon, Sun, User, ClipboardList, X } from 'lucide-react';
+import type { QAIssue } from '@/types/profile';
+import { Plus, Moon, Sun, User, ClipboardList, X, FileText } from 'lucide-react';
 import Link from 'next/link';
 import QuickCopyPanel from '@/components/QuickCopyPanel';
 
@@ -41,6 +42,14 @@ export default function CockpitChat() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [quickCopyOpen, setQuickCopyOpen] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
+  const [tailorOpen, setTailorOpen] = useState(false);
+  const [baseResumeLatex, setBaseResumeLatex] = useState('');
+  const [tailorJd, setTailorJd] = useState('');
+  const [tailorStatus, setTailorStatus] = useState<'idle' | 'ingesting' | 'tailoring' | 'ready' | 'error'>('idle');
+  const [tailorMessage, setTailorMessage] = useState('');
+  const [tailoredLatex, setTailoredLatex] = useState('');
+  const [tailorKeywords, setTailorKeywords] = useState<string[]>([]);
+  const [qaReport, setQaReport] = useState<{ before: QAIssue[]; after: QAIssue[]; autoFixed: boolean } | null>(null);
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -130,7 +139,9 @@ export default function CockpitChat() {
 
     try {
       let endpoint = '/api/chat';
-      let requestBody: any = {
+      let requestBody:
+        | { messages: Message[]; userMessage: string }
+        | { jd: string; history: Message[]; question: string } = {
         messages: messages,
         userMessage: fullContent,
       };
@@ -156,7 +167,7 @@ export default function CockpitChat() {
         try {
           const errorData = await response.json();
           if (errorData.error) errorMsg = errorData.error;
-        } catch (e) {
+        } catch {
           // ignore parse error
         }
         throw new Error(errorMsg);
@@ -189,6 +200,81 @@ export default function CockpitChat() {
     }
   };
 
+  const handleIngestResume = async () => {
+    if (!baseResumeLatex.trim()) return;
+    setTailorStatus('ingesting');
+    setTailorMessage('');
+
+    try {
+      const response = await fetch('/api/profile/ingest', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latex: baseResumeLatex }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to ingest resume');
+
+      setTailorStatus('idle');
+      setTailorMessage(
+        `Base profile saved: ${data.counts.projects} projects, ${data.counts.projectBullets} project bullets, ${data.counts.experience} experience entries, ${data.counts.experienceBullets} experience bullets.`
+      );
+    } catch (error) {
+      setTailorStatus('error');
+      setTailorMessage(error instanceof Error ? error.message : 'Failed to ingest resume');
+    }
+  };
+
+  const handleTailorResume = async () => {
+    if (!tailorJd.trim()) return;
+    setTailorStatus('tailoring');
+    setTailorMessage('');
+    setTailoredLatex('');
+    setQaReport(null);
+    setTailorKeywords([]);
+
+    try {
+      const response = await fetch('/api/tailor', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jd: tailorJd }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to tailor resume');
+
+      setTailoredLatex(data.latex);
+      setTailorKeywords(data.keywords || []);
+      setQaReport(data.qa);
+      setTailorStatus('ready');
+      setTailorMessage(
+        `Tailored resume ready. QA issues before revision: ${data.qa.before.length}. QA issues after revision: ${data.qa.after.length}.`
+      );
+
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `Tailored resume ready.\n\nKeywords detected: ${(data.keywords || []).slice(0, 10).join(', ') || 'None'}\n\nQA after auto-fix: ${data.qa.after.length} issue(s). Use the Tailor Resume panel to download the .tex file.`,
+        timestamp: new Date().toISOString(),
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      setTailorStatus('error');
+      setTailorMessage(error instanceof Error ? error.message : 'Failed to tailor resume');
+    }
+  };
+
+  const downloadTailoredLatex = () => {
+    if (!tailoredLatex) return;
+    const blob = new Blob([tailoredLatex], { type: 'application/x-tex;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = 'tailored-resume.tex';
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="cockpit-chat">
       {/* Header */}
@@ -204,6 +290,9 @@ export default function CockpitChat() {
           <button onClick={() => setQuickCopyOpen(true)} className="header-link" title="Quick Apply Info">
             <ClipboardList size={20} />
           </button>
+          <button onClick={() => setTailorOpen((open) => !open)} className="header-link" title="Tailor Resume">
+            <FileText size={20} />
+          </button>
           <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme">
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
           </button>
@@ -212,12 +301,85 @@ export default function CockpitChat() {
 
       {/* Chat Container */}
       <div className="chat-container">
+        {tailorOpen && (
+          <section className="tailor-panel" aria-label="Tailor resume">
+            <div className="tailor-panel-header">
+              <div>
+                <h2>Tailor Resume</h2>
+                <p>Set your base LaTeX resume once, then generate a job-specific .tex draft.</p>
+              </div>
+              <button className="tailor-close" onClick={() => setTailorOpen(false)} title="Close Tailor Resume">
+                <X size={16} />
+              </button>
+            </div>
+
+            <div className="tailor-grid">
+              <label className="tailor-field">
+                <span>Base resume .tex</span>
+                <textarea
+                  value={baseResumeLatex}
+                  onChange={(event) => setBaseResumeLatex(event.target.value)}
+                  placeholder="Paste your current LaTeX resume source here..."
+                  rows={7}
+                />
+              </label>
+              <label className="tailor-field">
+                <span>Target job description</span>
+                <textarea
+                  value={tailorJd}
+                  onChange={(event) => setTailorJd(event.target.value)}
+                  placeholder="Paste the job description you want to tailor toward..."
+                  rows={7}
+                />
+              </label>
+            </div>
+
+            <div className="tailor-actions">
+              <button onClick={handleIngestResume} disabled={tailorStatus === 'ingesting' || !baseResumeLatex.trim()}>
+                {tailorStatus === 'ingesting' ? 'Saving...' : 'Set as Base Profile'}
+              </button>
+              <button onClick={handleTailorResume} disabled={tailorStatus === 'tailoring' || !tailorJd.trim()}>
+                {tailorStatus === 'tailoring' ? 'Tailoring...' : 'Tailor Resume'}
+              </button>
+              <button onClick={downloadTailoredLatex} disabled={!tailoredLatex}>
+                Download .tex
+              </button>
+            </div>
+
+            {tailorMessage && (
+              <div className={`tailor-status ${tailorStatus === 'error' ? 'error' : ''}`}>
+                {tailorMessage}
+              </div>
+            )}
+
+            {(qaReport || tailorKeywords.length > 0) && (
+              <div className="tailor-results">
+                {tailorKeywords.length > 0 && (
+                  <p><strong>Keywords:</strong> {tailorKeywords.join(', ')}</p>
+                )}
+                {qaReport && (
+                  <p>
+                    <strong>QA:</strong> {qaReport.before.length} issue(s) before revision, {qaReport.after.length} after revision.
+                    {qaReport.after.length > 0 ? ` Remaining: ${qaReport.after.map((issue) => issue.type).join(', ')}` : ' Clean after deterministic checks.'}
+                  </p>
+                )}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Welcome State */}
         {messages.length === 0 ? (
           <div className="welcome-state">
             <h2>What can I help you with?</h2>
-            <p>Tell me about a job you want to analyze, search for roles, or track your applications.</p>
+            <p>Ask career questions, tailor your resume, analyze job descriptions, search for roles, or track your applications.</p>
             <div className="example-prompts">
+              <button
+                onClick={() => setTailorOpen(true)}
+                className="example-prompt"
+              >
+                Tailor my resume
+              </button>
               <button
                 onClick={() => setInput('Analyze this job description: [paste job description]')}
                 className="example-prompt"
@@ -299,7 +461,7 @@ export default function CockpitChat() {
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
             placeholder="Tell me what you want to analyze, search, or track..."
             className="chat-input"
             disabled={isLoading}

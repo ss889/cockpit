@@ -130,6 +130,148 @@ export const tools: any[] = [
   },
 ];
 
+export const extractProfileTool = {
+  name: "extract_resume_profile",
+  description: "Parse a LaTeX resume into a structured JSON profile",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      header: {
+        type: "object",
+        properties: {
+          name: { type: "string" },
+          phone: { type: "string" },
+          email: { type: "string" },
+          linkedin: { type: "string" },
+          github: { type: "string" },
+        },
+        required: ["name", "phone", "email", "linkedin", "github"],
+      },
+      education: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            school: { type: "string" },
+            location: { type: "string" },
+            degree: { type: "string" },
+            dates: { type: "string" },
+          },
+          required: ["school", "location", "degree", "dates"],
+        },
+      },
+      skills: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            category: { type: "string" },
+            items: { type: "array", items: { type: "string" } },
+          },
+          required: ["category", "items"],
+        },
+      },
+      projects: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            title: { type: "string" },
+            tags: { type: "string" },
+            status: { type: "string" },
+            bullets: { type: "array", items: { type: "string" } },
+          },
+          required: ["id", "title", "tags", "status", "bullets"],
+        },
+      },
+      experience: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            title: { type: "string" },
+            company: { type: "string" },
+            location: { type: "string" },
+            dates: { type: "string" },
+            bullets: { type: "array", items: { type: "string" } },
+          },
+          required: ["id", "title", "company", "location", "dates", "bullets"],
+        },
+      },
+    },
+    required: ["header", "education", "skills", "projects", "experience"],
+  },
+};
+
+export const tailorResumeTool = {
+  name: "tailor_resume",
+  description: "Rewrite resume bullets and select relevant projects to match a job description",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      selected_project_ids: { type: "array", items: { type: "string" } },
+      rewritten_projects: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            bullets: { type: "array", items: { type: "string" } },
+          },
+          required: ["id", "bullets"],
+        },
+      },
+      rewritten_experience: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            id: { type: "string" },
+            bullets: { type: "array", items: { type: "string" } },
+          },
+          required: ["id", "bullets"],
+        },
+      },
+      updated_skills: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            category: { type: "string" },
+            items: { type: "array", items: { type: "string" } },
+          },
+          required: ["category", "items"],
+        },
+      },
+    },
+    required: ["selected_project_ids", "rewritten_projects", "rewritten_experience", "updated_skills"],
+  },
+};
+
+export const reviseResumeBulletsTool = {
+  name: "revise_resume_bullets",
+  description: "Fix only flagged resume bullets without changing the underlying facts",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      revisions: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            location: { type: "string" },
+            bullet: { type: "string" },
+          },
+          required: ["location", "bullet"],
+        },
+      },
+    },
+    required: ["revisions"],
+  },
+};
+
 export function parseToolResults(
   content: any[]
 ): AnalysisResult {
