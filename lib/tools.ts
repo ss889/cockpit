@@ -1,4 +1,4 @@
-import type * as Anthropic from "@anthropic-ai/sdk";
+import type Anthropic from "@anthropic-ai/sdk";
 import {
   ParseJobDescriptionOutput,
   AnalyzeSkillGapOutput,
@@ -6,7 +6,7 @@ import {
   AnalysisResult,
 } from "@/types";
 
-export const tools: any[] = [
+export const tools: Anthropic.Messages.ToolUnion[] = [
   {
     name: "parse_job_description",
     description: "Extract structured role information from a job description",
@@ -272,8 +272,41 @@ export const reviseResumeBulletsTool = {
   },
 };
 
+export const editResumeTool = {
+  name: "edit_resume_section",
+  description: "Make a targeted edit to a specific bullet or section based on the user's request",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      explanation: {
+        type: "string",
+        description: "One or two sentences explaining what changed and why, written conversationally",
+      },
+      edits: {
+        type: "array",
+        items: {
+          type: "object",
+          properties: {
+            location: {
+              type: "string",
+              description: "Format: project:<id> or experience:<id>",
+            },
+            bullet_index: {
+              type: "number",
+              description: "Index of the bullet being changed",
+            },
+            new_text: { type: "string" },
+          },
+          required: ["location", "bullet_index", "new_text"],
+        },
+      },
+    },
+    required: ["explanation", "edits"],
+  },
+};
+
 export function parseToolResults(
-  content: any[]
+  content: unknown[]
 ): AnalysisResult {
   const result: AnalysisResult = {
     parsed: null,
@@ -282,8 +315,8 @@ export function parseToolResults(
   };
 
   for (const block of content) {
-    if (block.type === "tool_use") {
-      const input = block.input as Record<string, unknown>;
+    if (isToolUseBlock(block)) {
+      const input = block.input;
 
       switch (block.name) {
         case "parse_job_description":
@@ -300,6 +333,20 @@ export function parseToolResults(
   }
 
   return result;
+}
+
+function isToolUseBlock(block: unknown): block is { type: "tool_use"; name: string; input: Record<string, unknown> } {
+  return (
+    typeof block === "object" &&
+    block !== null &&
+    "type" in block &&
+    "name" in block &&
+    "input" in block &&
+    block.type === "tool_use" &&
+    typeof block.name === "string" &&
+    typeof block.input === "object" &&
+    block.input !== null
+  );
 }
 
 export const SYSTEM_PROMPT = `You are a career intelligence assistant for Sadikul Saber, a CS student at NJIT graduating May 2026.

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
 import type { QAIssue, ResumeProfile } from '@/types/profile';
+import { renderResumeLatex } from '@/lib/renderLatex';
 import { Plus, Moon, Sun, User, ClipboardList, X, FileText } from 'lucide-react';
 import Link from 'next/link';
 import QuickCopyPanel from '@/components/QuickCopyPanel';
@@ -50,6 +51,11 @@ export default function CockpitChat() {
   const [tailoredLatex, setTailoredLatex] = useState('');
   const [tailorKeywords, setTailorKeywords] = useState<string[]>([]);
   const [qaReport, setQaReport] = useState<{ before: QAIssue[]; after: QAIssue[]; autoFixed: boolean } | null>(null);
+  const [currentDraftProfile, setCurrentDraftProfile] = useState<ResumeProfile | null>(null);
+  const [refineMessages, setRefineMessages] = useState<Message[]>([]);
+  const [refineInput, setRefineInput] = useState('');
+  const [refineIssues, setRefineIssues] = useState<QAIssue[]>([]);
+  const [isRefining, setIsRefining] = useState(false);
   const [baseResumeProfile, setBaseResumeProfile] = useState<ResumeProfile | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
@@ -255,6 +261,9 @@ export default function CockpitChat() {
       setTailoredLatex(data.latex);
       setTailorKeywords(data.keywords || []);
       setQaReport(data.qa);
+      setCurrentDraftProfile(data.profile);
+      setRefineMessages([]);
+      setRefineIssues(data.qa?.after || []);
       setTailorStatus('ready');
       setTailorMessage(
         `Tailored resume ready. QA issues before revision: ${data.qa.before.length}. QA issues after revision: ${data.qa.after.length}.`
@@ -274,8 +283,9 @@ export default function CockpitChat() {
   };
 
   const downloadTailoredLatex = () => {
-    if (!tailoredLatex) return;
-    const blob = new Blob([tailoredLatex], { type: 'application/x-tex;charset=utf-8' });
+    const latestLatex = currentDraftProfile ? renderResumeLatex(currentDraftProfile) : tailoredLatex;
+    if (!latestLatex) return;
+    const blob = new Blob([latestLatex], { type: 'application/x-tex;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const anchor = document.createElement('a');
     anchor.href = url;
@@ -284,6 +294,59 @@ export default function CockpitChat() {
     anchor.click();
     anchor.remove();
     URL.revokeObjectURL(url);
+  };
+
+  const handleRefineResume = async () => {
+    if (!refineInput.trim() || !currentDraftProfile) return;
+
+    const userMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'user',
+      content: refineInput,
+      timestamp: new Date().toISOString(),
+    };
+    const nextHistory = [...refineMessages, userMessage];
+    setRefineMessages(nextHistory);
+    setRefineInput('');
+    setIsRefining(true);
+
+    try {
+      const response = await fetch('/api/tailor/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          draftProfile: currentDraftProfile,
+          jd: tailorJd,
+          keywords: tailorKeywords,
+          history: refineMessages,
+          message: userMessage.content,
+        }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to refine resume');
+
+      setCurrentDraftProfile(data.updatedProfile);
+      setTailoredLatex(renderResumeLatex(data.updatedProfile));
+      setRefineIssues(data.newIssues || []);
+
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: data.explanation || 'I made a targeted edit.',
+        timestamp: new Date().toISOString(),
+      };
+      setRefineMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      const assistantMessage: Message = {
+        id: crypto.randomUUID(),
+        role: 'assistant',
+        content: `Error: ${error instanceof Error ? error.message : 'Could not refine the draft'}`,
+        timestamp: new Date().toISOString(),
+      };
+      setRefineMessages((prev) => [...prev, assistantMessage]);
+    } finally {
+      setIsRefining(false);
+    }
   };
 
   return (
@@ -374,6 +437,93 @@ export default function CockpitChat() {
                     {qaReport.after.length > 0 ? ` Remaining: ${qaReport.after.map((issue) => issue.type).join(', ')}` : ' Clean after deterministic checks.'}
                   </p>
                 )}
+              </div>
+            )}
+
+            {currentDraftProfile && (
+              <div className="resume-preview">
+                <h3>Current Draft</h3>
+                {currentDraftProfile.projects.length > 0 && (
+                  <div>
+                    <h4>Projects</h4>
+                    {currentDraftProfile.projects.map((project) => (
+                      <div key={project.id} className="resume-preview-entry">
+                        <strong>{project.title}</strong>
+                        <ul>
+                          {project.bullets.map((bullet, index) => {
+                            const location = `project:${project.id}:${index}`;
+                            const issues = refineIssues.filter((issue) => issue.location === location || issue.location === 'global');
+                            return (
+                              <li key={location}>
+                                {bullet}
+                                {issues.length > 0 && (
+                                  <span className="resume-preview-warning">
+                                    QA: {issues.map((issue) => issue.type).join(', ')}
+                                  </span>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
+                {currentDraftProfile.experience.length > 0 && (
+                  <div>
+                    <h4>Experience</h4>
+                    {currentDraftProfile.experience.map((experience) => (
+                      <div key={experience.id} className="resume-preview-entry">
+                        <strong>{experience.title} - {experience.company}</strong>
+                        <ul>
+                          {experience.bullets.map((bullet, index) => {
+                            const location = `experience:${experience.id}:${index}`;
+                            const issues = refineIssues.filter((issue) => issue.location === location || issue.location === 'global');
+                            return (
+                              <li key={location}>
+                                {bullet}
+                                {issues.length > 0 && (
+                                  <span className="resume-preview-warning">
+                                    QA: {issues.map((issue) => issue.type).join(', ')}
+                                  </span>
+                                )}
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {currentDraftProfile && (
+              <div className="refine-panel">
+                <h3>Refine</h3>
+                <div className="refine-thread">
+                  {refineMessages.length === 0 ? (
+                    <p className="refine-empty">Ask for a targeted change, like “make the second JobOps bullet punchier.”</p>
+                  ) : (
+                    refineMessages.map((message) => (
+                      <div key={message.id} className={`refine-message ${message.role}`}>
+                        {message.content}
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="refine-input-row">
+                  <input
+                    value={refineInput}
+                    onChange={(event) => setRefineInput(event.target.value)}
+                    onKeyDown={(event) => event.key === 'Enter' && handleRefineResume()}
+                    placeholder="e.g. make the second project bullet punchier"
+                    disabled={isRefining}
+                  />
+                  <button onClick={handleRefineResume} disabled={isRefining || !refineInput.trim()}>
+                    {isRefining ? 'Editing...' : 'Send'}
+                  </button>
+                </div>
               </div>
             )}
           </section>

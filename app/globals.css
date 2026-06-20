@@ -545,6 +545,124 @@ body {
   background: rgba(239, 68, 68, 0.08);
 }
 
+.resume-preview,
+.refine-panel {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.resume-preview h3,
+.refine-panel h3 {
+  font-family: var(--font-display);
+  font-size: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.resume-preview h4 {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  margin: 0.75rem 0 0.4rem;
+}
+
+.resume-preview-entry {
+  margin-bottom: 0.75rem;
+  font-size: 0.82rem;
+}
+
+.resume-preview-entry strong {
+  display: block;
+  margin-bottom: 0.3rem;
+}
+
+.resume-preview-entry ul {
+  margin-left: 1rem;
+}
+
+.resume-preview-entry li {
+  margin-bottom: 0.35rem;
+  line-height: 1.45;
+}
+
+.resume-preview-warning {
+  display: block;
+  margin-top: 0.25rem;
+  color: #b91c1c;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.refine-thread {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 220px;
+  overflow-y: auto;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.refine-empty {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+}
+
+.refine-message {
+  max-width: 82%;
+  padding: 0.55rem 0.7rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.refine-message.user {
+  align-self: flex-end;
+  background: var(--msg-user-bg);
+  color: var(--msg-user-text);
+}
+
+.refine-message.assistant {
+  align-self: flex-start;
+  background: var(--msg-assistant-bg);
+  color: var(--msg-assistant-text);
+}
+
+.refine-input-row {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.refine-input-row input {
+  flex: 1;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.65rem 0.75rem;
+  background: var(--bg);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+}
+
+.refine-input-row button {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.65rem 0.9rem;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.refine-input-row button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 /* File Badge */
 .file-badge {
   display: inline-flex;

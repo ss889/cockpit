@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { extractKeywordsFallback } from "@/lib/ollama";
 import { escapeLatex, renderResumeLatex } from "@/lib/renderLatex";
+import { applyResumeEdits } from "@/lib/resumeEdit";
 import { runQA } from "@/lib/resumeQA";
 import type { ResumeProfile } from "@/types/profile";
 
@@ -94,5 +95,21 @@ describe("resume tailoring helpers", () => {
     expect(latex).toContain("\\documentclass");
     expect(latex).toContain("\\section{Projects}");
     expect(latex).toContain("\\resumeItem{Built MCP workflows for content editing.}");
+  });
+
+  it("applies refinement edits only to targeted bullets", () => {
+    const updated = applyResumeEdits(sampleProfile, [
+      {
+        location: "project:agentic-blog",
+        bullet_index: 1,
+        new_text: "Improved Claude API revision planning for tailored content workflows.",
+      },
+    ]);
+
+    expect(updated.projects[0].bullets[0]).toBe(sampleProfile.projects[0].bullets[0]);
+    expect(updated.projects[0].bullets[1]).toBe(
+      "Improved Claude API revision planning for tailored content workflows."
+    );
+    expect(updated.experience[0].bullets).toEqual(sampleProfile.experience[0].bullets);
   });
 });
