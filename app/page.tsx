@@ -503,7 +503,7 @@ export default function CockpitChat() {
                 <h3>Refine</h3>
                 <div className="refine-thread">
                   {refineMessages.length === 0 ? (
-                    <p className="refine-empty">Ask for a targeted change, like “make the second JobOps bullet punchier.”</p>
+                    <p className="refine-empty">Ask for a targeted change, like &quot;make the second JobOps bullet punchier.&quot;</p>
                   ) : (
                     refineMessages.map((message) => (
                       <div key={message.id} className={`refine-message ${message.role}`}>

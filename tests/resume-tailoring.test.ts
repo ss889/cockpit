@@ -56,7 +56,7 @@ describe("resume tailoring helpers", () => {
         {
           ...sampleProfile.projects[0],
           bullets: [
-            "Built robust workflows — with repeated phrasing.",
+            "Built robust workflows \u2014 with repeated phrasing.",
             "Built TypeScript tooling.",
             "Built Python automation.",
           ],

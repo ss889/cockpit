@@ -3,6 +3,7 @@ import { createAnthropicClient } from "@/lib/anthropicClient";
 import { getBaseProfile } from "@/lib/database";
 import { extractKeywords } from "@/lib/ollama";
 import { renderResumeLatex } from "@/lib/renderLatex";
+import { sanitizeBullet } from "@/lib/resumeEdit";
 import { collectBullets, runQA } from "@/lib/resumeQA";
 import { reviseResumeBulletsTool, tailorResumeTool } from "@/lib/tools";
 import type { QAIssue, ResumeProfile } from "@/types/profile";
@@ -181,13 +182,6 @@ function applyRevisions(profile: ResumeProfile, revisions: { location: string; b
 
 function sanitizeBullets(bullets: string[]): string[] {
   return bullets.map(sanitizeBullet).filter(Boolean);
-}
-
-function sanitizeBullet(bullet: string): string {
-  return String(bullet || "")
-    .replace(/[—–]/g, "-")
-    .replace(/\s+/g, " ")
-    .trim();
 }
 
 function buildTailorPrompt(baseProfile: ResumeProfile, jd: string, keywords: string[]): string {
