@@ -91,7 +91,7 @@ export default function CockpitChat() {
         if (data.error) throw new Error(data.error);
         
         setAttachedFile({ name: file.name, content: data.text });
-      } else if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.json') || file.name.endsWith('.csv')) {
+      } else if (file.type.startsWith('text/') || file.name.endsWith('.md') || file.name.endsWith('.json') || file.name.endsWith('.csv') || file.name.endsWith('.tex')) {
         const reader = new FileReader();
         reader.onload = (event) => {
           const text = event.target?.result as string;
@@ -139,6 +139,80 @@ export default function CockpitChat() {
     scrollToBottom();
   }, [messages]);
 
+  const appendAssistantMessage = (content: string) => {
+    const assistantMessage: Message = {
+      id: crypto.randomUUID(),
+      role: 'assistant',
+      content,
+      timestamp: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, assistantMessage]);
+  };
+
+  const ingestResumeSource = async (source: string): Promise<ResumeProfile> => {
+    const response = await fetch('/api/profile/ingest', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ latex: source }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to ingest resume');
+
+    setBaseResumeProfile(data.profile);
+    window.localStorage.setItem('jobops_base_resume_profile', JSON.stringify(data.profile));
+    return data.profile;
+  };
+
+  const generateTailoredResume = async (profile: ResumeProfile, jdText: string) => {
+    const response = await fetch('/api/tailor', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ jd: jdText, profile }),
+    });
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || 'Failed to tailor resume');
+
+    setTailoredLatex(data.latex);
+    setTailorKeywords(data.keywords || []);
+    setQaReport(data.qa);
+    setCurrentDraftProfile(data.profile);
+    setRefineMessages([]);
+    setRefineIssues(data.qa?.after || []);
+    setTailorJd(jdText);
+    setTailorOpen(true);
+    setTailorStatus('ready');
+    setTailorMessage(
+      `Tailored resume ready. QA issues before revision: ${data.qa.before.length}. QA issues after revision: ${data.qa.after.length}.`
+    );
+
+    return data;
+  };
+
+  const handleChatTailorRequest = async (jdText: string, resumeSource?: string) => {
+    setTailorOpen(true);
+    setTailorStatus(resumeSource ? 'ingesting' : 'tailoring');
+    setTailorMessage(resumeSource ? 'Reading your resume...' : 'Tailoring your saved resume...');
+    setTailoredLatex('');
+    setQaReport(null);
+    setTailorKeywords([]);
+
+    const profile = resumeSource
+      ? await ingestResumeSource(resumeSource)
+      : currentDraftProfile || baseResumeProfile;
+
+    if (!profile) {
+      throw new Error('Attach your resume or set a base resume profile before tailoring.');
+    }
+
+    setTailorStatus('tailoring');
+    setTailorMessage('Generating a tailored .tex draft...');
+    const data = await generateTailoredResume(profile, jdText);
+
+    appendAssistantMessage(
+      `Tailored resume ready.\n\nKeywords detected: ${(data.keywords || []).slice(0, 10).join(', ') || 'None'}\n\nQA after auto-fix: ${data.qa.after.length} issue(s). Open the Tailor Resume panel to review, refine, or download the .tex file.`
+    );
+  };
+
   const handleSendMessage = async () => {
     if (!input.trim() && !attachedFile) return;
 
@@ -163,8 +237,26 @@ export default function CockpitChat() {
     setInput('');
     setAttachedFile(null);
     setIsLoading(true);
+    const lowerInput = input.toLowerCase();
+    const hasTailorAction = lowerInput.includes('tailor') || /\b(customize|target|adapt|rewrite)\b/.test(lowerInput);
+    const hasTailorSubject = /\b(resume|cv)\b/.test(lowerInput) || Boolean(attachedFile || baseResumeProfile || currentDraftProfile);
+    const hasTailorIntent = hasTailorAction && hasTailorSubject;
 
     try {
+      const resumeSource = attachedFile?.content;
+
+      if (hasTailorIntent && (resumeSource || baseResumeProfile || currentDraftProfile)) {
+        await handleChatTailorRequest(input, resumeSource);
+        return;
+      }
+
+      if (hasTailorIntent) {
+        setTailorOpen(true);
+        setTailorStatus('error');
+        setTailorMessage('Attach your resume or set a base resume profile before tailoring.');
+        throw new Error('Attach your resume or set a base resume profile before tailoring.');
+      }
+
       let endpoint = '/api/chat';
       let requestBody:
         | { messages: Message[]; userMessage: string; baseProfile?: ResumeProfile | null }
@@ -219,6 +311,10 @@ export default function CockpitChat() {
         setJd(fullContent);
       }
     } catch (error) {
+      if (hasTailorIntent) {
+        setTailorStatus('error');
+        setTailorMessage(error instanceof Error ? error.message : 'An error occurred');
+      }
       const errorMessage: Message = {
         id: crypto.randomUUID(),
         role: 'assistant',
@@ -237,19 +333,10 @@ export default function CockpitChat() {
     setTailorMessage('');
 
     try {
-      const response = await fetch('/api/profile/ingest', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ latex: baseResumeLatex }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to ingest resume');
-
+      const profile = await ingestResumeSource(baseResumeLatex);
       setTailorStatus('idle');
-      setBaseResumeProfile(data.profile);
-      window.localStorage.setItem('jobops_base_resume_profile', JSON.stringify(data.profile));
       setTailorMessage(
-        `Base profile saved: ${data.counts.projects} projects, ${data.counts.projectBullets} project bullets, ${data.counts.experience} experience entries, ${data.counts.experienceBullets} experience bullets.`
+        `Base profile saved: ${profile.projects.length} projects, ${profile.projects.reduce((sum, project) => sum + project.bullets.length, 0)} project bullets, ${profile.experience.length} experience entries, ${profile.experience.reduce((sum, experience) => sum + experience.bullets.length, 0)} experience bullets.`
       );
     } catch (error) {
       setTailorStatus('error');
@@ -266,32 +353,12 @@ export default function CockpitChat() {
     setTailorKeywords([]);
 
     try {
-      const response = await fetch('/api/tailor', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ jd: tailorJd, profile: baseResumeProfile }),
-      });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || 'Failed to tailor resume');
-
-      setTailoredLatex(data.latex);
-      setTailorKeywords(data.keywords || []);
-      setQaReport(data.qa);
-      setCurrentDraftProfile(data.profile);
-      setRefineMessages([]);
-      setRefineIssues(data.qa?.after || []);
-      setTailorStatus('ready');
-      setTailorMessage(
-        `Tailored resume ready. QA issues before revision: ${data.qa.before.length}. QA issues after revision: ${data.qa.after.length}.`
+      const profile = baseResumeProfile || currentDraftProfile;
+      if (!profile) throw new Error('Set a base resume profile before tailoring.');
+      const data = await generateTailoredResume(profile, tailorJd);
+      appendAssistantMessage(
+        `Tailored resume ready.\n\nKeywords detected: ${(data.keywords || []).slice(0, 10).join(', ') || 'None'}\n\nQA after auto-fix: ${data.qa.after.length} issue(s). Use the Tailor Resume panel to download the .tex file.`
       );
-
-      const assistantMessage: Message = {
-        id: crypto.randomUUID(),
-        role: 'assistant',
-        content: `Tailored resume ready.\n\nKeywords detected: ${(data.keywords || []).slice(0, 10).join(', ') || 'None'}\n\nQA after auto-fix: ${data.qa.after.length} issue(s). Use the Tailor Resume panel to download the .tex file.`,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages((prev) => [...prev, assistantMessage]);
     } catch (error) {
       setTailorStatus('error');
       setTailorMessage(error instanceof Error ? error.message : 'Failed to tailor resume');
@@ -428,7 +495,7 @@ export default function CockpitChat() {
               <button onClick={handleIngestResume} disabled={tailorStatus === 'ingesting' || !baseResumeLatex.trim()}>
                 {tailorStatus === 'ingesting' ? 'Saving...' : 'Set as Base Profile'}
               </button>
-              <button onClick={handleTailorResume} disabled={tailorStatus === 'tailoring' || !tailorJd.trim()}>
+              <button onClick={handleTailorResume} disabled={tailorStatus === 'tailoring' || !tailorJd.trim() || (!baseResumeProfile && !currentDraftProfile)}>
                 {tailorStatus === 'tailoring' ? 'Tailoring...' : 'Tailor Resume'}
               </button>
               <button onClick={downloadTailoredLatex} disabled={!tailoredLatex}>
@@ -625,7 +692,7 @@ export default function CockpitChat() {
             ref={fileInputRef} 
             onChange={handleFileUpload} 
             style={{ display: 'none' }} 
-            accept=".txt,.md,.json,.csv,.pdf"
+            accept=".txt,.md,.json,.csv,.tex,.pdf"
           />
           <button 
             onClick={() => fileInputRef.current?.click()}

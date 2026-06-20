@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
   try {
     const { latex } = await request.json();
     if (!latex || typeof latex !== "string") {
-      return NextResponse.json({ error: "LaTeX resume source is required" }, { status: 400 });
+      return NextResponse.json({ error: "Resume source text is required" }, { status: 400 });
     }
 
     const client = createAnthropicClient();
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
       model,
       max_tokens: 4096,
       system:
-        "Parse the provided LaTeX resume into the exact structured schema requested. Preserve all text exactly as written, do not paraphrase or summarize. Each project and experience entry must have its bullets as separate array items, stripped of LaTeX commands but preserving the actual words. Assign stable lowercase ids based on each project or experience title.",
+        "Parse the provided resume into the exact structured schema requested. The source may be LaTeX, PDF-extracted plain text, or pasted resume text. Preserve all text exactly as written, do not paraphrase or summarize. Each project and experience entry must have its bullets as separate array items, stripped of LaTeX commands or formatting artifacts but preserving the actual words. Assign stable lowercase ids based on each project or experience title.",
       tools: [extractProfileTool],
       tool_choice: { type: "tool", name: "extract_resume_profile" },
       messages: [
