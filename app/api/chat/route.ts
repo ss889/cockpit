@@ -1,9 +1,9 @@
 import '@/lib/patchAnthropicModel';
-import type * as Anthropic from '@anthropic-ai/sdk';
 import { createAnthropicClient } from '@/lib/anthropicClient';
 import { NextRequest, NextResponse } from 'next/server';
 import { getSystemPrompt } from '@/lib/promptStore';
 import { getBaseProfile } from '@/lib/database';
+import type { ResumeProfile } from '@/types/profile';
 
 interface ParsedJD {
   role: string;
@@ -20,8 +20,32 @@ interface SkillGaps {
   development_areas: string[];
 }
 
+type ChatTool = {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties: Record<string, unknown>;
+    required?: string[];
+  };
+};
+
+type ClaudeTextBlock = {
+  type: 'text';
+  text: string;
+};
+
+type ClaudeToolUseBlock = {
+  type: 'tool_use';
+  id: string;
+  name: string;
+  input: unknown;
+};
+
+type ClaudeContentBlock = ClaudeTextBlock | ClaudeToolUseBlock | { type: string };
+
 // Tool definitions for Claude
-const tools: any[] = [
+const tools: ChatTool[] = [
   {
     name: 'parse_job_description',
     description: 'Parses a job description and extracts key requirements like required skills, experience level, and role details',
@@ -153,7 +177,7 @@ async function searchJobsForTool(query: string, location?: string): Promise<stri
     
     const data = await resp.json();
     return JSON.stringify(data, null, 2);
-  } catch (e) {
+  } catch {
     // Fallback: return constructed search URLs directly
     const encodedQuery = encodeURIComponent(query);
     const encodedLocation = encodeURIComponent(location || 'United States');
@@ -199,17 +223,18 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { messages, userMessage, jobDescription } = await request.json();
+    const { messages, userMessage, jobDescription, baseProfile: requestBaseProfile } = await request.json();
 
     const client = createAnthropicClient();
 
     // Build the system prompt from the editable prompt store
     const systemPromptBase = getSystemPrompt();
-    const baseProfile = getBaseProfile();
+    const baseProfile = isResumeProfile(requestBaseProfile) ? requestBaseProfile : getBaseProfile();
     const resumeContext = baseProfile
-      ? `\n\nActive base resume profile for resume tailoring and career questions:\n${JSON.stringify(baseProfile, null, 2)}`
+      ? `\n\nActive resume profile from the user's saved resume. Use this profile for resume tailoring, resume review, career positioning, and questions about the user's background. Do not say you cannot access the resume when this profile is present; cite the relevant projects, skills, and experience from this structured data instead.\n${JSON.stringify(baseProfile, null, 2)}`
       : '';
-    const systemPrompt = systemPromptBase + resumeContext + (jobDescription ? `\n\nUser job description provided:\n${jobDescription}` : '');
+    const attachmentGuidance = "\n\nIf a message includes an attached file with extracted text, treat that extracted text as readable context. Do not claim you cannot read the attachment unless the extracted text is empty or unusable.";
+    const systemPrompt = systemPromptBase + resumeContext + attachmentGuidance + (jobDescription ? `\n\nUser job description provided:\n${jobDescription}` : '');
 
     // Convert messages to Anthropic format
     const conversationMessages = [
@@ -237,10 +262,10 @@ export async function POST(request: NextRequest) {
     let assistantContent = '';
     const toolResults: Array<{ type: string; tool_use_id: string; content: string }> = [];
 
-    for (const block of (response.content as any[])) {
-      if (block.type === 'text') {
+    for (const block of response.content as ClaudeContentBlock[]) {
+      if (isClaudeTextBlock(block)) {
         assistantContent = block.text;
-      } else if (block.type === 'tool_use') {
+      } else if (isClaudeToolUseBlock(block)) {
         // Execute the tool
         let toolResult = '';
 
@@ -306,10 +331,37 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('Chat error:', error);
-    const errorMessage = (error as any)?.message || String(error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     return NextResponse.json(
       { error: `API Error: ${errorMessage}` },
       { status: 500 }
     );
   }
+}
+
+function isResumeProfile(value: unknown): value is ResumeProfile {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as Partial<ResumeProfile>;
+  return (
+    typeof candidate.header === 'object' &&
+    Array.isArray(candidate.education) &&
+    Array.isArray(candidate.skills) &&
+    Array.isArray(candidate.projects) &&
+    Array.isArray(candidate.experience)
+  );
+}
+
+function isClaudeTextBlock(block: ClaudeContentBlock): block is ClaudeTextBlock {
+  return block.type === 'text' && 'text' in block && typeof block.text === 'string';
+}
+
+function isClaudeToolUseBlock(block: ClaudeContentBlock): block is ClaudeToolUseBlock {
+  return (
+    block.type === 'tool_use' &&
+    'id' in block &&
+    'name' in block &&
+    'input' in block &&
+    typeof block.id === 'string' &&
+    typeof block.name === 'string'
+  );
 }

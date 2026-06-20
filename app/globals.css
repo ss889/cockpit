@@ -267,7 +267,7 @@ body {
   padding: 0.5rem 0.5rem 0.5rem 1rem;
   border-radius: 8px;
   border: 1px solid var(--border);
-  align-items: center;
+  align-items: flex-end;
   transition: border-color 0.2s;
 }
 
@@ -306,6 +306,11 @@ body {
   font-size: 0.95rem;
   font-family: inherit;
   color: var(--text-primary);
+  line-height: 1.5;
+  max-height: 10rem;
+  min-height: 2.75rem;
+  resize: none;
+  overflow-y: auto;
 }
 
 .chat-input:focus {
@@ -636,7 +641,7 @@ body {
   margin-top: 0.75rem;
 }
 
-.refine-input-row input {
+.refine-input-row textarea {
   flex: 1;
   min-width: 0;
   border: 1px solid var(--border);
@@ -645,6 +650,8 @@ body {
   background: var(--bg);
   color: var(--text-primary);
   font-family: var(--font-body);
+  line-height: 1.45;
+  resize: vertical;
 }
 
 .refine-input-row button {

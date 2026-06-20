@@ -123,6 +123,18 @@ export default function CockpitChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const handleChatKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    event.preventDefault();
+    handleSendMessage();
+  };
+
+  const handleRefineKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (event.key !== 'Enter' || event.shiftKey) return;
+    event.preventDefault();
+    handleRefineResume();
+  };
+
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -131,13 +143,13 @@ export default function CockpitChat() {
     if (!input.trim() && !attachedFile) return;
 
     // Build the visible message (what the user sees in chat)
-    const visibleContent = attachedFile 
-      ? `📎 ${attachedFile.name}${input.trim() ? '\n' + input : ''}`
+    const visibleContent = attachedFile
+      ? `Attached file: ${attachedFile.name}${input.trim() ? '\n' + input : ''}`
       : input;
 
     // Build the full content sent to the AI (includes file text)
     const fullContent = attachedFile
-      ? `[Attached file: ${attachedFile.name}]\n\n${attachedFile.content}${input.trim() ? '\n\n' + input : ''}`
+      ? `[Attached file: ${attachedFile.name}]\n\nExtracted text:\n${attachedFile.content}${input.trim() ? '\n\nUser request:\n' + input : ''}`
       : input;
 
     const userMessage: Message = {
@@ -155,14 +167,18 @@ export default function CockpitChat() {
     try {
       let endpoint = '/api/chat';
       let requestBody:
-        | { messages: Message[]; userMessage: string }
+        | { messages: Message[]; userMessage: string; baseProfile?: ResumeProfile | null }
         | { jd: string; history: Message[]; question: string } = {
         messages: messages,
         userMessage: fullContent,
+        baseProfile: currentDraftProfile || baseResumeProfile,
       };
 
-      // Use the specialized analyze endpoint if they specifically ask to analyze or if we have a JD context
-      if (fullContent.toLowerCase().includes('analyze') || (jd && fullContent.length > 50)) {
+      const lowerContent = fullContent.toLowerCase();
+      const hasResumeIntent = /\b(resume|tailor|cv|cover letter)\b/.test(lowerContent);
+
+      // Use the specialized analyze endpoint for job descriptions, but keep resume conversations in chat.
+      if (!hasResumeIntent && (lowerContent.includes('analyze') || (jd && fullContent.length > 50))) {
         endpoint = '/api/analyze';
         requestBody = {
           jd: jd || fullContent,
@@ -199,7 +215,7 @@ export default function CockpitChat() {
       setMessages((prev) => [...prev, assistantMessage]);
       
       // Store job descriptions for analysis
-      if (fullContent.toLowerCase().includes('analyze') && fullContent.length > 50) {
+      if (!hasResumeIntent && lowerContent.includes('analyze') && fullContent.length > 50) {
         setJd(fullContent);
       }
     } catch (error) {
@@ -513,12 +529,13 @@ export default function CockpitChat() {
                   )}
                 </div>
                 <div className="refine-input-row">
-                  <input
+                  <textarea
                     value={refineInput}
                     onChange={(event) => setRefineInput(event.target.value)}
-                    onKeyDown={(event) => event.key === 'Enter' && handleRefineResume()}
+                    onKeyDown={handleRefineKeyDown}
                     placeholder="e.g. make the second project bullet punchier"
                     disabled={isRefining}
+                    rows={Math.min(5, Math.max(2, refineInput.split('\n').length))}
                   />
                   <button onClick={handleRefineResume} disabled={isRefining || !refineInput.trim()}>
                     {isRefining ? 'Editing...' : 'Send'}
@@ -545,25 +562,25 @@ export default function CockpitChat() {
                 onClick={() => setInput('Analyze this job description: [paste job description]')}
                 className="example-prompt"
               >
-                📋 Analyze a job description
+                Analyze a job description
               </button>
               <button
                 onClick={() => setInput('Search for AI engineer roles in SF')}
                 className="example-prompt"
               >
-                🔍 Search for jobs
+                Search for jobs
               </button>
               <button
                 onClick={() => setInput('Show me my tracked jobs')}
                 className="example-prompt"
               >
-                💾 View saved jobs
+                View saved jobs
               </button>
               <button
                 onClick={() => setInput('What skills should I focus on for ML engineering?')}
                 className="example-prompt"
               >
-                🎯 Career advice
+                Career advice
               </button>
             </div>
           </div>
@@ -592,7 +609,7 @@ export default function CockpitChat() {
       <div className="chat-input-area">
         {attachedFile && (
           <div className="file-badge">
-            <span className="file-badge-name">📎 {attachedFile.name}</span>
+            <span className="file-badge-name">Attached file: {attachedFile.name}</span>
             <button 
               className="file-badge-remove" 
               onClick={() => setAttachedFile(null)}
@@ -618,14 +635,14 @@ export default function CockpitChat() {
           >
             <Plus size={22} strokeWidth={2.5} />
           </button>
-          <input
-            type="text"
+          <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+            onKeyDown={handleChatKeyDown}
             placeholder="Tell me what you want to analyze, search, or track..."
             className="chat-input"
             disabled={isLoading}
+            rows={Math.min(6, Math.max(1, input.split('\n').length))}
           />
           <button
             onClick={handleSendMessage}
