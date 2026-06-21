@@ -432,6 +432,8 @@ export default function CockpitChat() {
     }
   };
 
+  const latestTailoredLatex = currentDraftProfile ? renderResumeLatex(currentDraftProfile) : tailoredLatex;
+
   return (
     <div className="cockpit-chat">
       {/* Header */}
@@ -457,7 +459,7 @@ export default function CockpitChat() {
       </header>
 
       {/* Chat Container */}
-      <div className="chat-container">
+      <div className={`chat-container ${tailorOpen ? 'with-tailor-panel' : ''}`}>
         {tailorOpen && (
           <section className="tailor-panel" aria-label="Tailor resume">
             <div className="tailor-panel-header">
@@ -506,6 +508,20 @@ export default function CockpitChat() {
             {tailorMessage && (
               <div className={`tailor-status ${tailorStatus === 'error' ? 'error' : ''}`}>
                 {tailorMessage}
+              </div>
+            )}
+
+            {latestTailoredLatex && (
+              <div className="latex-preview-panel">
+                <div className="latex-preview-header">
+                  <h3>Tailored LaTeX</h3>
+                  <button onClick={downloadTailoredLatex} type="button">
+                    Download .tex
+                  </button>
+                </div>
+                <pre className="latex-preview" aria-label="Generated tailored resume LaTeX">
+                  <code>{latestTailoredLatex}</code>
+                </pre>
               </div>
             )}
 
