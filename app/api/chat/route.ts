@@ -44,6 +44,14 @@ type ClaudeToolUseBlock = {
 
 type ClaudeContentBlock = ClaudeTextBlock | ClaudeToolUseBlock | { type: string };
 
+type MemoryContextEntry = {
+  wing?: string;
+  room?: string;
+  drawer?: string;
+  title?: string;
+  text?: string;
+};
+
 // Tool definitions for Claude
 const tools: ChatTool[] = [
   {
@@ -223,7 +231,7 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { messages, userMessage, jobDescription, baseProfile: requestBaseProfile } = await request.json();
+    const { messages, userMessage, jobDescription, baseProfile: requestBaseProfile, memories } = await request.json();
 
     const client = createAnthropicClient();
 
@@ -233,8 +241,9 @@ export async function POST(request: NextRequest) {
     const resumeContext = baseProfile
       ? `\n\nActive resume profile from the user's saved resume. Use this profile for resume tailoring, resume review, career positioning, and questions about the user's background. Do not say you cannot access the resume when this profile is present; cite the relevant projects, skills, and experience from this structured data instead.\n${JSON.stringify(baseProfile, null, 2)}`
       : '';
+    const memoryContext = formatMemoryContext(memories);
     const attachmentGuidance = "\n\nIf a message includes an attached file with extracted text, treat that extracted text as readable context. Do not claim you cannot read the attachment unless the extracted text is empty or unusable.";
-    const systemPrompt = systemPromptBase + resumeContext + attachmentGuidance + (jobDescription ? `\n\nUser job description provided:\n${jobDescription}` : '');
+    const systemPrompt = systemPromptBase + resumeContext + memoryContext + attachmentGuidance + (jobDescription ? `\n\nUser job description provided:\n${jobDescription}` : '');
 
     // Convert messages to Anthropic format
     const conversationMessages = [
@@ -349,6 +358,24 @@ function isResumeProfile(value: unknown): value is ResumeProfile {
     Array.isArray(candidate.projects) &&
     Array.isArray(candidate.experience)
   );
+}
+
+function formatMemoryContext(value: unknown): string {
+  if (!Array.isArray(value)) return '';
+  const entries = value
+    .filter((entry): entry is MemoryContextEntry => typeof entry === 'object' && entry !== null)
+    .slice(0, 8)
+    .map((entry) => {
+      const location = [entry.wing, entry.room, entry.drawer].filter(Boolean).join(' / ') || 'general';
+      const title = entry.title || 'Untitled memory';
+      const text = (entry.text || '').slice(0, 1200);
+      return `- ${location} :: ${title}\n${text}`;
+    })
+    .filter((entry) => entry.trim().length > 0);
+
+  return entries.length
+    ? `\n\nRelevant Memory Palace entries. Use these as persistent user context when helpful, but do not reveal private details unless the user asks:\n${entries.join('\n\n')}`
+    : '';
 }
 
 function isClaudeTextBlock(block: ClaudeContentBlock): block is ClaudeTextBlock {

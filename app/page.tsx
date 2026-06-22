@@ -4,9 +4,40 @@ import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
 import type { QAIssue, ResumeProfile } from '@/types/profile';
 import { renderResumeLatex } from '@/lib/renderLatex';
-import { Plus, Moon, Sun, User, ClipboardList, X, FileText } from 'lucide-react';
+import { Plus, Moon, Sun, User, ClipboardList, X, FileText, Brain, LogOut, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import QuickCopyPanel from '@/components/QuickCopyPanel';
+
+type WorkspaceRole = 'owner' | 'editor' | 'viewer';
+
+type WorkspaceSession = {
+  name: string;
+  role: WorkspaceRole;
+  signedInAt: string;
+};
+
+type MemoryEntry = {
+  id: string;
+  wing: string;
+  room: string;
+  drawer: string;
+  title: string;
+  text: string;
+  createdAt: string;
+};
+
+type JobDescriptionEntry = {
+  id: string;
+  title: string;
+  company: string;
+  url?: string;
+  text: string;
+  createdAt: string;
+  tailoredLatex?: string;
+  tailoredAt?: string;
+  status?: 'saved' | 'tailoring' | 'ready' | 'error';
+  error?: string;
+};
 
 // Convert URLs and markdown links in message text to clickable HTML
 function renderMessageContent(text: string): string {
@@ -35,6 +66,25 @@ function renderMessageContent(text: string): string {
   return html;
 }
 
+function loadStoredValue<T>(key: string, fallback: T): T {
+  if (typeof window === 'undefined') return fallback;
+  try {
+    const saved = window.localStorage.getItem(key);
+    return saved ? (JSON.parse(saved) as T) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function saveStoredValue<T>(key: string, value: T) {
+  if (typeof window === 'undefined') return;
+  window.localStorage.setItem(key, JSON.stringify(value));
+}
+
+function newId(prefix: string): string {
+  return `${prefix}-${crypto.randomUUID()}`;
+}
+
 export default function CockpitChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -42,6 +92,28 @@ export default function CockpitChat() {
   const [jd, setJd] = useState('');
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [quickCopyOpen, setQuickCopyOpen] = useState(false);
+  const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [session, setSession] = useState<WorkspaceSession | null>(() =>
+    loadStoredValue<WorkspaceSession | null>('jobops_workspace_session', null)
+  );
+  const [loginName, setLoginName] = useState('');
+  const [loginRole, setLoginRole] = useState<WorkspaceRole>('owner');
+  const [memories, setMemories] = useState<MemoryEntry[]>(() =>
+    loadStoredValue<MemoryEntry[]>('jobops_memory_palace', [])
+  );
+  const [memoryForm, setMemoryForm] = useState({
+    wing: 'career',
+    room: 'resume',
+    drawer: 'projects',
+    title: '',
+    text: '',
+  });
+  const [memorySearch, setMemorySearch] = useState('');
+  const [jobDescriptions, setJobDescriptions] = useState<JobDescriptionEntry[]>(() =>
+    loadStoredValue<JobDescriptionEntry[]>('jobops_job_descriptions', [])
+  );
+  const [jobForm, setJobForm] = useState({ title: '', company: '', url: '', text: '' });
+  const [jobLibraryStatus, setJobLibraryStatus] = useState('');
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
   const [tailorOpen, setTailorOpen] = useState(false);
   const [baseResumeLatex, setBaseResumeLatex] = useState('');
@@ -68,6 +140,12 @@ export default function CockpitChat() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const canEditWorkspace = session?.role === 'owner' || session?.role === 'editor';
+  const filteredMemories = memories.filter((memory) => {
+    const query = memorySearch.trim().toLowerCase();
+    if (!query) return true;
+    return `${memory.wing} ${memory.room} ${memory.drawer} ${memory.title} ${memory.text}`.toLowerCase().includes(query);
+  });
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -149,6 +227,148 @@ export default function CockpitChat() {
     setMessages((prev) => [...prev, assistantMessage]);
   };
 
+  const signInWorkspace = () => {
+    if (!loginName.trim()) return;
+    const nextSession: WorkspaceSession = {
+      name: loginName.trim(),
+      role: loginRole,
+      signedInAt: new Date().toISOString(),
+    };
+    setSession(nextSession);
+    saveStoredValue('jobops_workspace_session', nextSession);
+    setLoginName('');
+  };
+
+  const signOutWorkspace = () => {
+    setSession(null);
+    if (typeof window !== 'undefined') {
+      window.localStorage.removeItem('jobops_workspace_session');
+    }
+  };
+
+  const persistMemories = (nextMemories: MemoryEntry[]) => {
+    setMemories(nextMemories);
+    saveStoredValue('jobops_memory_palace', nextMemories);
+  };
+
+  const updateJobDescriptions = (updater: (jobs: JobDescriptionEntry[]) => JobDescriptionEntry[]) => {
+    setJobDescriptions((currentJobs) => {
+      const nextJobs = updater(currentJobs);
+      saveStoredValue('jobops_job_descriptions', nextJobs);
+      return nextJobs;
+    });
+  };
+
+  const addMemory = () => {
+    if (!canEditWorkspace || !memoryForm.title.trim() || !memoryForm.text.trim()) return;
+    const nextMemory: MemoryEntry = {
+      id: newId('memory'),
+      wing: memoryForm.wing.trim() || 'career',
+      room: memoryForm.room.trim() || 'general',
+      drawer: memoryForm.drawer.trim() || 'notes',
+      title: memoryForm.title.trim(),
+      text: memoryForm.text.trim(),
+      createdAt: new Date().toISOString(),
+    };
+    persistMemories([nextMemory, ...memories]);
+    setMemoryForm((form) => ({ ...form, title: '', text: '' }));
+  };
+
+  const deleteMemory = (id: string) => {
+    if (!canEditWorkspace) return;
+    persistMemories(memories.filter((memory) => memory.id !== id));
+  };
+
+  const addJobMemory = (job: JobDescriptionEntry) => {
+    const nextMemory: MemoryEntry = {
+      id: newId('memory'),
+      wing: 'career',
+      room: 'job-descriptions',
+      drawer: job.company || 'unknown-company',
+      title: job.title,
+      text: job.text.slice(0, 5000),
+      createdAt: new Date().toISOString(),
+    };
+    persistMemories([nextMemory, ...memories]);
+  };
+
+  const saveJobDescriptionEntry = (entry: JobDescriptionEntry) => {
+    updateJobDescriptions((jobs) => [entry, ...jobs.filter((job) => job.id !== entry.id)]);
+    addJobMemory(entry);
+  };
+
+  const saveJobDescriptionFromForm = () => {
+    if (!canEditWorkspace || !jobForm.text.trim()) return;
+    const entry: JobDescriptionEntry = {
+      id: newId('jd'),
+      title: jobForm.title.trim() || 'Untitled job',
+      company: jobForm.company.trim() || 'Unknown company',
+      url: jobForm.url.trim() || undefined,
+      text: jobForm.text.trim(),
+      createdAt: new Date().toISOString(),
+      status: 'saved',
+    };
+    saveJobDescriptionEntry(entry);
+    setJobForm({ title: '', company: '', url: '', text: '' });
+    setJobLibraryStatus('Job description saved.');
+  };
+
+  const importJobFromUrl = async () => {
+    if (!canEditWorkspace || !jobForm.url.trim()) return;
+    setJobLibraryStatus('Importing job link...');
+    try {
+      const response = await fetch('/api/job-link', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: jobForm.url.trim() }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to import job link');
+
+      setJobForm((form) => ({
+        ...form,
+        title: form.title || data.title || 'Imported job',
+        url: data.url || form.url,
+        text: data.text || '',
+      }));
+      setJobLibraryStatus('Imported job text. Review it, then save.');
+    } catch (error) {
+      setJobLibraryStatus(error instanceof Error ? error.message : 'Failed to import job link');
+    }
+  };
+
+  const deleteJobDescription = (id: string) => {
+    if (!canEditWorkspace) return;
+    updateJobDescriptions((jobs) => jobs.filter((job) => job.id !== id));
+  };
+
+  const downloadTextFile = (filename: string, text: string) => {
+    const blob = new Blob([text], { type: 'application/x-tex;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    URL.revokeObjectURL(url);
+  };
+
+  const selectRelevantMemories = (query: string): MemoryEntry[] => {
+    const tokens = query.toLowerCase().split(/\W+/).filter((token) => token.length > 2);
+    if (tokens.length === 0) return memories.slice(0, 5);
+    return memories
+      .map((memory) => {
+        const haystack = `${memory.wing} ${memory.room} ${memory.drawer} ${memory.title} ${memory.text}`.toLowerCase();
+        const score = tokens.reduce((sum, token) => sum + (haystack.includes(token) ? 1 : 0), 0);
+        return { memory, score };
+      })
+      .filter(({ score }) => score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 8)
+      .map(({ memory }) => memory);
+  };
+
   const ingestResumeSource = async (source: string): Promise<ResumeProfile> => {
     const response = await fetch('/api/profile/ingest', {
       method: 'POST',
@@ -186,6 +406,62 @@ export default function CockpitChat() {
     );
 
     return data;
+  };
+
+  const tailorSavedJob = async (job: JobDescriptionEntry) => {
+    if (!canEditWorkspace) return;
+    const profile = currentDraftProfile || baseResumeProfile;
+    if (!profile) {
+      setJobLibraryStatus('Set or attach a base resume before tailoring saved jobs.');
+      return;
+    }
+
+    updateJobDescriptions((jobs) =>
+      jobs.map((item) =>
+        item.id === job.id ? { ...item, status: 'tailoring', error: undefined } : item
+      )
+    );
+    setTailorOpen(true);
+    setTailorStatus('tailoring');
+    setTailorMessage(`Tailoring resume for ${job.title}...`);
+
+    try {
+      const data = await generateTailoredResume(profile, job.text);
+      const latestLatex = renderResumeLatex(data.profile);
+      updateJobDescriptions((jobs) =>
+        jobs.map((item) =>
+          item.id === job.id
+            ? {
+                ...item,
+                tailoredLatex: latestLatex,
+                tailoredAt: new Date().toISOString(),
+                status: 'ready',
+                error: undefined,
+              }
+            : item
+        )
+      );
+      setJobLibraryStatus(`Tailored resume ready for ${job.title}.`);
+      appendAssistantMessage(`Tailored resume ready for ${job.title}. Open Workspace to download the saved .tex file.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to tailor saved job';
+      updateJobDescriptions((jobs) =>
+        jobs.map((item) =>
+          item.id === job.id ? { ...item, status: 'error', error: message } : item
+        )
+      );
+      setTailorStatus('error');
+      setTailorMessage(message);
+      setJobLibraryStatus(message);
+    }
+  };
+
+  const tailorAllSavedJobs = async () => {
+    if (!canEditWorkspace) return;
+    const jobsToTailor = jobDescriptions.filter((job) => job.text.trim());
+    for (const job of jobsToTailor) {
+      await tailorSavedJob(job);
+    }
   };
 
   const handleChatTailorRequest = async (jdText: string, resumeSource?: string) => {
@@ -259,11 +535,12 @@ export default function CockpitChat() {
 
       let endpoint = '/api/chat';
       let requestBody:
-        | { messages: Message[]; userMessage: string; baseProfile?: ResumeProfile | null }
+        | { messages: Message[]; userMessage: string; baseProfile?: ResumeProfile | null; memories?: MemoryEntry[] }
         | { jd: string; history: Message[]; question: string } = {
         messages: messages,
         userMessage: fullContent,
         baseProfile: currentDraftProfile || baseResumeProfile,
+        memories: selectRelevantMemories(fullContent),
       };
 
       const lowerContent = fullContent.toLowerCase();
@@ -368,15 +645,7 @@ export default function CockpitChat() {
   const downloadTailoredLatex = () => {
     const latestLatex = currentDraftProfile ? renderResumeLatex(currentDraftProfile) : tailoredLatex;
     if (!latestLatex) return;
-    const blob = new Blob([latestLatex], { type: 'application/x-tex;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const anchor = document.createElement('a');
-    anchor.href = url;
-    anchor.download = 'tailored-resume.tex';
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    URL.revokeObjectURL(url);
+    downloadTextFile('tailored-resume.tex', latestLatex);
   };
 
   const handleRefineResume = async () => {
@@ -451,6 +720,9 @@ export default function CockpitChat() {
           </button>
           <button onClick={() => setTailorOpen((open) => !open)} className="header-link" title="Tailor Resume">
             <FileText size={20} />
+          </button>
+          <button onClick={() => setWorkspaceOpen((open) => !open)} className="header-link" title="Workspace Memory">
+            <Brain size={20} />
           </button>
           <button onClick={toggleTheme} className="theme-toggle" title="Toggle Theme">
             {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
@@ -737,6 +1009,208 @@ export default function CockpitChat() {
         </div>
         <p className="input-hint">Paste job descriptions, ask about roles, or discuss your career path</p>
       </div>
+
+      {workspaceOpen && (
+        <aside className="workspace-panel" aria-label="Workspace memory and job descriptions">
+          <div className="workspace-header">
+            <div>
+              <h2>Workspace</h2>
+              <p>Persistent career memory, saved JDs, and batch resume tailoring.</p>
+            </div>
+            <button className="tailor-close" onClick={() => setWorkspaceOpen(false)} title="Close Workspace">
+              <X size={16} />
+            </button>
+          </div>
+
+          <section className="workspace-section">
+            <div className="workspace-section-title">
+              <h3>Access</h3>
+              {session && (
+                <button className="workspace-icon-button" onClick={signOutWorkspace} title="Sign out">
+                  <LogOut size={15} />
+                </button>
+              )}
+            </div>
+            {session ? (
+              <div className="workspace-session">
+                <strong>{session.name}</strong>
+                <span>{session.role}</span>
+              </div>
+            ) : (
+              <div className="workspace-form">
+                <input
+                  value={loginName}
+                  onChange={(event) => setLoginName(event.target.value)}
+                  placeholder="Workspace name"
+                />
+                <select value={loginRole} onChange={(event) => setLoginRole(event.target.value as WorkspaceRole)}>
+                  <option value="owner">Owner</option>
+                  <option value="editor">Editor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+                <button onClick={signInWorkspace} disabled={!loginName.trim()}>
+                  Sign in
+                </button>
+              </div>
+            )}
+          </section>
+
+          <section className="workspace-section">
+            <div className="workspace-section-title">
+              <h3>Memory Palace</h3>
+              <span>{memories.length}</span>
+            </div>
+            <div className="workspace-form memory-grid">
+              <input
+                value={memoryForm.wing}
+                onChange={(event) => setMemoryForm((form) => ({ ...form, wing: event.target.value }))}
+                placeholder="Wing"
+                disabled={!canEditWorkspace}
+              />
+              <input
+                value={memoryForm.room}
+                onChange={(event) => setMemoryForm((form) => ({ ...form, room: event.target.value }))}
+                placeholder="Room"
+                disabled={!canEditWorkspace}
+              />
+              <input
+                value={memoryForm.drawer}
+                onChange={(event) => setMemoryForm((form) => ({ ...form, drawer: event.target.value }))}
+                placeholder="Drawer"
+                disabled={!canEditWorkspace}
+              />
+            </div>
+            <div className="workspace-form">
+              <input
+                value={memoryForm.title}
+                onChange={(event) => setMemoryForm((form) => ({ ...form, title: event.target.value }))}
+                placeholder="Memory title"
+                disabled={!canEditWorkspace}
+              />
+              <textarea
+                value={memoryForm.text}
+                onChange={(event) => setMemoryForm((form) => ({ ...form, text: event.target.value }))}
+                placeholder="Save a verbatim fact, preference, project detail, recruiter note, or reusable career context."
+                rows={4}
+                disabled={!canEditWorkspace}
+              />
+              <button onClick={addMemory} disabled={!canEditWorkspace || !memoryForm.title.trim() || !memoryForm.text.trim()}>
+                Add Memory
+              </button>
+            </div>
+            <input
+              className="workspace-search"
+              value={memorySearch}
+              onChange={(event) => setMemorySearch(event.target.value)}
+              placeholder="Search memory..."
+            />
+            <div className="workspace-list">
+              {filteredMemories.length === 0 ? (
+                <p className="workspace-empty">No memories saved yet.</p>
+              ) : (
+                filteredMemories.map((memory) => (
+                  <article key={memory.id} className="workspace-card">
+                    <div className="workspace-card-header">
+                      <strong>{memory.title}</strong>
+                      {canEditWorkspace && (
+                        <button onClick={() => deleteMemory(memory.id)} title="Delete memory">
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                    <span>{memory.wing} / {memory.room} / {memory.drawer}</span>
+                    <p>{memory.text}</p>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+
+          <section className="workspace-section">
+            <div className="workspace-section-title">
+              <h3>Job Descriptions</h3>
+              <span>{jobDescriptions.length}</span>
+            </div>
+            <div className="workspace-form">
+              <input
+                value={jobForm.url}
+                onChange={(event) => setJobForm((form) => ({ ...form, url: event.target.value }))}
+                placeholder="Job link"
+                disabled={!canEditWorkspace}
+              />
+              <button onClick={importJobFromUrl} disabled={!canEditWorkspace || !jobForm.url.trim()}>
+                <LinkIcon size={15} />
+                Import Link
+              </button>
+              <input
+                value={jobForm.title}
+                onChange={(event) => setJobForm((form) => ({ ...form, title: event.target.value }))}
+                placeholder="Job title"
+                disabled={!canEditWorkspace}
+              />
+              <input
+                value={jobForm.company}
+                onChange={(event) => setJobForm((form) => ({ ...form, company: event.target.value }))}
+                placeholder="Company"
+                disabled={!canEditWorkspace}
+              />
+              <textarea
+                value={jobForm.text}
+                onChange={(event) => setJobForm((form) => ({ ...form, text: event.target.value }))}
+                placeholder="Paste or import the job description..."
+                rows={7}
+                disabled={!canEditWorkspace}
+              />
+              <button onClick={saveJobDescriptionFromForm} disabled={!canEditWorkspace || !jobForm.text.trim()}>
+                Save JD
+              </button>
+            </div>
+            {jobLibraryStatus && <p className="workspace-status">{jobLibraryStatus}</p>}
+            <div className="workspace-bulk-actions">
+              <button onClick={tailorAllSavedJobs} disabled={!canEditWorkspace || jobDescriptions.length === 0 || (!baseResumeProfile && !currentDraftProfile)}>
+                Tailor All Saved JDs
+              </button>
+            </div>
+            <div className="workspace-list">
+              {jobDescriptions.length === 0 ? (
+                <p className="workspace-empty">No job descriptions saved yet.</p>
+              ) : (
+                jobDescriptions.map((job) => (
+                  <article key={job.id} className="workspace-card">
+                    <div className="workspace-card-header">
+                      <strong>{job.title}</strong>
+                      {canEditWorkspace && (
+                        <button onClick={() => deleteJobDescription(job.id)} title="Delete job description">
+                          <X size={14} />
+                        </button>
+                      )}
+                    </div>
+                    <span>{job.company}{job.status ? ` - ${job.status}` : ''}</span>
+                    {job.url && (
+                      <a href={job.url} target="_blank" rel="noopener noreferrer">
+                        {job.url}
+                      </a>
+                    )}
+                    <p>{job.text.slice(0, 360)}{job.text.length > 360 ? '...' : ''}</p>
+                    {job.error && <p className="workspace-error">{job.error}</p>}
+                    <div className="workspace-card-actions">
+                      <button onClick={() => tailorSavedJob(job)} disabled={!canEditWorkspace || job.status === 'tailoring' || (!baseResumeProfile && !currentDraftProfile)}>
+                        {job.status === 'tailoring' ? 'Tailoring...' : 'Tailor'}
+                      </button>
+                      <button
+                        onClick={() => job.tailoredLatex && downloadTextFile(`${job.title.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-resume.tex`, job.tailoredLatex)}
+                        disabled={!job.tailoredLatex}
+                      >
+                        Download .tex
+                      </button>
+                    </div>
+                  </article>
+                ))
+              )}
+            </div>
+          </section>
+        </aside>
+      )}
 
       <QuickCopyPanel
         isOpen={quickCopyOpen}
