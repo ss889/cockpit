@@ -94,6 +94,7 @@ describe("resume tailoring helpers", () => {
     const latex = renderResumeLatex(sampleProfile);
     expect(latex).toContain("\\documentclass");
     expect(latex).toContain("\\section{Projects}");
+    expect(latex).toContain("\\newcommand{\\resumeItemListStart}{\\begin{itemize}[label={\\textbullet}]}");
     expect(latex).toContain("\\resumeItem{Built MCP workflows for content editing.}");
   });
 
