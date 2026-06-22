@@ -3,41 +3,11 @@
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
 import type { QAIssue, ResumeProfile } from '@/types/profile';
+import type { JobDescriptionEntry, LocalWorkspace, MemoryEntry, WorkspaceRole, WorkspaceSession } from '@/types/workspace';
 import { renderResumeLatex } from '@/lib/renderLatex';
 import { Plus, Moon, Sun, User, ClipboardList, X, FileText, Brain, LogOut, Link as LinkIcon } from 'lucide-react';
 import Link from 'next/link';
 import QuickCopyPanel from '@/components/QuickCopyPanel';
-
-type WorkspaceRole = 'owner' | 'editor' | 'viewer';
-
-type WorkspaceSession = {
-  name: string;
-  role: WorkspaceRole;
-  signedInAt: string;
-};
-
-type MemoryEntry = {
-  id: string;
-  wing: string;
-  room: string;
-  drawer: string;
-  title: string;
-  text: string;
-  createdAt: string;
-};
-
-type JobDescriptionEntry = {
-  id: string;
-  title: string;
-  company: string;
-  url?: string;
-  text: string;
-  createdAt: string;
-  tailoredLatex?: string;
-  tailoredAt?: string;
-  status?: 'saved' | 'tailoring' | 'ready' | 'error';
-  error?: string;
-};
 
 // Convert URLs and markdown links in message text to clickable HTML
 function renderMessageContent(text: string): string {
@@ -90,6 +60,7 @@ export default function CockpitChat() {
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [jd, setJd] = useState('');
+  const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [quickCopyOpen, setQuickCopyOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
@@ -140,12 +111,37 @@ export default function CockpitChat() {
   
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const initialWorkspaceRef = useRef<Partial<LocalWorkspace>>({
+    session,
+    memories,
+    jobDescriptions,
+    baseResumeProfile,
+  });
   const canEditWorkspace = session?.role === 'owner' || session?.role === 'editor';
   const filteredMemories = memories.filter((memory) => {
     const query = memorySearch.trim().toLowerCase();
     if (!query) return true;
     return `${memory.wing} ${memory.room} ${memory.drawer} ${memory.title} ${memory.text}`.toLowerCase().includes(query);
   });
+
+  const saveLocalWorkspace = (overrides: Partial<LocalWorkspace>) => {
+    if (!workspaceHydrated) return;
+    const workspace: Partial<LocalWorkspace> = {
+      session,
+      memories,
+      jobDescriptions,
+      baseResumeProfile,
+      ...overrides,
+    };
+
+    fetch('/api/workspace', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(workspace),
+    }).catch(() => {
+      // Keep localStorage fallback available if the local server is not writable.
+    });
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -217,6 +213,48 @@ export default function CockpitChat() {
     scrollToBottom();
   }, [messages]);
 
+  useEffect(() => {
+    let active = true;
+
+    async function hydrateWorkspace() {
+      try {
+        const response = await fetch('/api/workspace');
+        const data = await response.json();
+        if (!active || !response.ok || !data.workspace) return;
+
+        const workspace = data.workspace as LocalWorkspace;
+        if (!workspace.updatedAt) {
+          await fetch('/api/workspace', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(initialWorkspaceRef.current),
+          });
+          return;
+        }
+
+        setSession(workspace.session ?? null);
+        setMemories(workspace.memories ?? []);
+        setJobDescriptions(workspace.jobDescriptions ?? []);
+        setBaseResumeProfile(workspace.baseResumeProfile ?? null);
+        saveStoredValue('jobops_workspace_session', workspace.session ?? null);
+        saveStoredValue('jobops_memory_palace', workspace.memories ?? []);
+        saveStoredValue('jobops_job_descriptions', workspace.jobDescriptions ?? []);
+        if (workspace.baseResumeProfile) {
+          saveStoredValue('jobops_base_resume_profile', workspace.baseResumeProfile);
+        }
+      } catch {
+        // Browser localStorage remains the fallback for deployed or read-only environments.
+      } finally {
+        if (active) setWorkspaceHydrated(true);
+      }
+    }
+
+    hydrateWorkspace();
+    return () => {
+      active = false;
+    };
+  }, []);
+
   const appendAssistantMessage = (content: string) => {
     const assistantMessage: Message = {
       id: crypto.randomUUID(),
@@ -236,6 +274,7 @@ export default function CockpitChat() {
     };
     setSession(nextSession);
     saveStoredValue('jobops_workspace_session', nextSession);
+    saveLocalWorkspace({ session: nextSession });
     setLoginName('');
   };
 
@@ -244,17 +283,20 @@ export default function CockpitChat() {
     if (typeof window !== 'undefined') {
       window.localStorage.removeItem('jobops_workspace_session');
     }
+    saveLocalWorkspace({ session: null });
   };
 
   const persistMemories = (nextMemories: MemoryEntry[]) => {
     setMemories(nextMemories);
     saveStoredValue('jobops_memory_palace', nextMemories);
+    saveLocalWorkspace({ memories: nextMemories });
   };
 
   const updateJobDescriptions = (updater: (jobs: JobDescriptionEntry[]) => JobDescriptionEntry[]) => {
     setJobDescriptions((currentJobs) => {
       const nextJobs = updater(currentJobs);
       saveStoredValue('jobops_job_descriptions', nextJobs);
+      saveLocalWorkspace({ jobDescriptions: nextJobs });
       return nextJobs;
     });
   };
@@ -379,7 +421,8 @@ export default function CockpitChat() {
     if (!response.ok) throw new Error(data.error || 'Failed to ingest resume');
 
     setBaseResumeProfile(data.profile);
-    window.localStorage.setItem('jobops_base_resume_profile', JSON.stringify(data.profile));
+    saveStoredValue('jobops_base_resume_profile', data.profile);
+    saveLocalWorkspace({ baseResumeProfile: data.profile });
     return data.profile;
   };
 
@@ -1015,7 +1058,7 @@ export default function CockpitChat() {
           <div className="workspace-header">
             <div>
               <h2>Workspace</h2>
-              <p>Persistent career memory, saved JDs, and batch resume tailoring.</p>
+              <p>Local-file career memory, saved JDs, and batch resume tailoring.</p>
             </div>
             <button className="tailor-close" onClick={() => setWorkspaceOpen(false)} title="Close Workspace">
               <X size={16} />
@@ -1053,6 +1096,9 @@ export default function CockpitChat() {
                 </button>
               </div>
             )}
+            <p className="workspace-status">
+              Saves locally to data/local-workspace.json when running this app on your machine.
+            </p>
           </section>
 
           <section className="workspace-section">
