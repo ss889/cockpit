@@ -43,7 +43,10 @@ const sampleProfile: ResumeProfile = {
       company: "NJIT",
       location: "Newark, NJ",
       dates: "2025",
-      bullets: ["Developed Python scripts for dataset cleanup.", "Shipped TypeScript dashboards for analysis."],
+      bullets: [
+        "Cleaned 500 rows of dataset exports using Python validation scripts.",
+        "Shipped 3 TypeScript dashboard views with reusable chart components.",
+      ],
     },
   ],
 };
@@ -70,6 +73,21 @@ describe("resume tailoring helpers", () => {
     expect(issues.some((issue) => issue.type === "formulaic_phrase")).toBe(true);
     expect(issues.some((issue) => issue.type === "repeated_verb")).toBe(true);
     expect(issues.some((issue) => issue.type === "long_bullet")).toBe(true);
+  });
+
+  it("flags experience bullets that do not follow an XYZ shape", () => {
+    const profile: ResumeProfile = {
+      ...sampleProfile,
+      experience: [
+        {
+          ...sampleProfile.experience[0],
+          bullets: ["Worked on dashboards for analysis."],
+        },
+      ],
+    };
+
+    const issues = runQA(profile, ["TypeScript"]);
+    expect(issues.some((issue) => issue.type === "weak_xyz_formula")).toBe(true);
   });
 
   it("returns no QA issues for a clean keyword-covered profile", () => {
@@ -104,6 +122,8 @@ describe("resume tailoring helpers", () => {
     expect(latex).toContain("\\section{Projects}");
     expect(latex).toContain("\\newcommand{\\resumeItemListStart}{\\begin{itemize}[label={\\textbullet}]}");
     expect(latex).toContain("\\resumeItem{Built MCP workflows for content editing.}");
+    expect(latex).not.toContain("\\begin{tabular");
+    expect(latex).not.toContain("\\usepackage{tabularx}");
   });
 
   it("applies refinement edits only to targeted bullets", () => {

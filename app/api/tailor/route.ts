@@ -123,7 +123,7 @@ async function reviseFlaggedBullets(profile: ResumeProfile, issues: QAIssue[]): 
     model,
     max_tokens: 2048,
     system:
-      "Fix only these specific issues in the bullets below. Do not change anything else. Never invent facts, tools, metrics, or experience. Write like a careful human resume editor: plain verbs, concrete nouns, natural rhythm, no padded claims. Remove all dash punctuation, avoid formulaic AI phrases, vary opening verbs, keep each bullet one sentence, and keep bullets under 32 words when possible.",
+      "Fix only these specific issues in the bullets below. Do not change anything else. Never invent facts, tools, metrics, or experience. Write like a careful human resume editor: plain verbs, concrete nouns, natural rhythm, no padded claims. Remove all dash punctuation, avoid formulaic AI phrases, vary opening verbs, keep each bullet one sentence, and keep bullets under 32 words when possible. For experience bullets, use the Google XYZ shape when truthful: achieved X, measured or scoped by Y, by doing Z.",
     tools: [reviseResumeBulletsTool],
     tool_choice: { type: "tool", name: "revise_resume_bullets" },
     messages: [
@@ -202,6 +202,9 @@ Rules you must follow:
 - Keep each bullet as a single sentence, specific and concrete, usually 18 to 28 words
 - Include numbers only when they already exist in the base profile or are directly supported by it
 - Avoid inflated adjectives, marketing language, and vague claims about impact
+- For experience bullets, follow Google's XYZ shape when truthful: achieved X, measured or scoped by Y, by doing Z
+- If there is no real metric, use an honest scope signal such as records, rows, files, tests, dashboards, workflows, datasets, responses, or scheduled runs from the base profile
+- Keep the LaTeX ATS-friendly: standard section names, simple bullets, no tables, no text boxes, no graphics, and no multi-column layout
 - If the base profile has more projects than reasonably fit, select the most relevant ones rather than including everything
 
 Base profile:

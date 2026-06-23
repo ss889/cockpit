@@ -31,6 +31,8 @@ const BAD_PHRASES = [
 
 const DASH_PATTERN = /[\u2014\u2013]|\s-\s/;
 const MAX_BULLET_WORDS = 32;
+const XYZ_METHOD_PATTERN = /\b(by|using|through|with|via)\b/i;
+const XYZ_MEASURE_PATTERN = /\b(\d+[%+]?|\d+x|users?|records?|rows?|files?|tables?|views?|dashboards?|reports?|tests?|pipelines?|workflows?|datasets?|responses?|requests?|hours?|minutes?|seconds?|weekly|monthly|daily)\b/i;
 
 export function runQA(profile: ResumeProfile, jdKeywords: string[]): QAIssue[] {
   const issues: QAIssue[] = [];
@@ -57,10 +59,28 @@ export function runQA(profile: ResumeProfile, jdKeywords: string[]): QAIssue[] {
 
   addRepeatedVerbIssues(issues, allBullets);
   addLongBulletIssues(issues, allBullets);
+  addExperienceXyzIssues(issues, profile);
   addBulletBalanceIssues(issues, profile);
   addKeywordCoverageIssues(issues, allBullets, jdKeywords);
 
   return issues;
+}
+
+function addExperienceXyzIssues(issues: QAIssue[], profile: ResumeProfile): void {
+  for (const experience of profile.experience) {
+    experience.bullets.forEach((bullet, index) => {
+      const hasMethod = XYZ_METHOD_PATTERN.test(bullet);
+      const hasMeasure = XYZ_MEASURE_PATTERN.test(bullet);
+
+      if (!hasMethod || !hasMeasure) {
+        issues.push({
+          type: "weak_xyz_formula",
+          location: `experience:${experience.id}:${index}`,
+          detail: `Experience bullet should show what changed, how it was measured or scoped, and how it was done: ${bullet}`,
+        });
+      }
+    });
+  }
 }
 
 function addLongBulletIssues(

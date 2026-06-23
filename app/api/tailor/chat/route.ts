@@ -78,6 +78,8 @@ Style constraints:
 - Use plain human verbs and concrete nouns
 - Keep bullets one sentence and usually 18 to 28 words
 - Avoid copying the job description word-for-word unless the wording is a truthful skill or tool name
+- For experience bullets, use the Google XYZ shape when truthful: achieved X, measured or scoped by Y, by doing Z
+- If a real metric is unavailable, use an honest scope signal from the current profile such as records, rows, files, tests, dashboards, workflows, datasets, responses, or scheduled runs
 
 Return edits only through the edit_resume_section tool. Locations must be exactly project:<id> or experience:<id>, and bullet_index is zero-based.
 

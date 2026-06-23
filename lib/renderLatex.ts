@@ -40,7 +40,6 @@ ${experience.bullets.map((bullet) => `        \\resumeItem{${escapeLatex(bullet)
 \\usepackage[hidelinks]{hyperref}
 \\usepackage{fancyhdr}
 \\usepackage[english]{babel}
-\\usepackage{tabularx}
 \\input{glyphtounicode}
 
 \\pagestyle{fancy}
@@ -74,17 +73,13 @@ ${experience.bullets.map((bullet) => `        \\resumeItem{${escapeLatex(bullet)
 
 \\newcommand{\\resumeSubheading}[4]{
   \\vspace{-2pt}\\item
-    \\begin{tabular*}{0.97\\textwidth}[t]{l@{\\extracolsep{\\fill}}r}
-      \\textbf{#1} & #2 \\\\
-      \\textit{\\small#3} & \\textit{\\small #4} \\\\
-    \\end{tabular*}\\vspace{-7pt}
+    \\textbf{#1} \\hfill #2 \\\\
+    \\textit{\\small #3} \\hfill \\textit{\\small #4}\\vspace{-7pt}
 }
 
 \\newcommand{\\resumeProjectHeading}[2]{
     \\item
-    \\begin{tabular*}{0.97\\textwidth}{l@{\\extracolsep{\\fill}}r}
-      \\small#1 & #2 \\\\
-    \\end{tabular*}\\vspace{-7pt}
+    \\small #1 \\hfill #2\\vspace{-7pt}
 }
 
 \\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0.15in, label={}]}
