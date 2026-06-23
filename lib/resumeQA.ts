@@ -8,11 +8,29 @@ const BAD_PHRASES = [
   "seamless",
   "cutting-edge",
   "utilize",
+  "utilized",
   "synergy",
   "best-in-class",
+  "end-to-end",
+  "scalable solution",
+  "innovative solution",
+  "dynamic",
+  "fast-paced",
+  "results-driven",
+  "detail-oriented",
+  "highly motivated",
+  "proven ability",
+  "responsible for",
+  "played a key role",
+  "with a focus on",
+  "to help",
+  "helped to",
+  "demonstrated ability",
+  "passionate about",
 ];
 
-const DASH_PATTERN = /[\u2014\u2013]/;
+const DASH_PATTERN = /[\u2014\u2013]|\s-\s/;
+const MAX_BULLET_WORDS = 32;
 
 export function runQA(profile: ResumeProfile, jdKeywords: string[]): QAIssue[] {
   const issues: QAIssue[] = [];
@@ -20,7 +38,7 @@ export function runQA(profile: ResumeProfile, jdKeywords: string[]): QAIssue[] {
 
   for (const { location, text } of allBullets) {
     if (DASH_PATTERN.test(text)) {
-      issues.push({ type: "em_dash", location, detail: text });
+      issues.push({ type: "dash_punctuation", location, detail: text });
     }
   }
 
@@ -29,7 +47,7 @@ export function runQA(profile: ResumeProfile, jdKeywords: string[]): QAIssue[] {
     for (const phrase of BAD_PHRASES) {
       if (lower.includes(phrase)) {
         issues.push({
-          type: "generic_phrase",
+          type: "formulaic_phrase",
           location,
           detail: `"${phrase}" in: ${text}`,
         });
@@ -38,10 +56,27 @@ export function runQA(profile: ResumeProfile, jdKeywords: string[]): QAIssue[] {
   }
 
   addRepeatedVerbIssues(issues, allBullets);
+  addLongBulletIssues(issues, allBullets);
   addBulletBalanceIssues(issues, profile);
   addKeywordCoverageIssues(issues, allBullets, jdKeywords);
 
   return issues;
+}
+
+function addLongBulletIssues(
+  issues: QAIssue[],
+  bullets: { location: string; text: string }[]
+): void {
+  for (const { location, text } of bullets) {
+    const wordCount = text.trim().split(/\s+/).filter(Boolean).length;
+    if (wordCount > MAX_BULLET_WORDS) {
+      issues.push({
+        type: "long_bullet",
+        location,
+        detail: `${wordCount} words: ${text}`,
+      });
+    }
+  }
 }
 
 export function collectBullets(profile: ResumeProfile): { location: string; text: string }[] {

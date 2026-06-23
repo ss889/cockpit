@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { extractKeywordsFallback } from "@/lib/ollama";
 import { escapeLatex, renderResumeLatex } from "@/lib/renderLatex";
-import { applyResumeEdits } from "@/lib/resumeEdit";
+import { applyResumeEdits, sanitizeBullet } from "@/lib/resumeEdit";
 import { runQA } from "@/lib/resumeQA";
 import type { ResumeProfile } from "@/types/profile";
 
@@ -59,15 +59,17 @@ describe("resume tailoring helpers", () => {
             "Built robust workflows \u2014 with repeated phrasing.",
             "Built TypeScript tooling.",
             "Built Python automation.",
+            "Leveraged a scalable solution with a focus on seamless collaboration across multiple dynamic stakeholders and fast-paced business priorities while supporting cross-functional execution across changing implementation requirements, documentation reviews, deployment planning, validation work, and ongoing stakeholder updates.",
           ],
         },
       ],
     };
 
     const issues = runQA(profile, ["TypeScript", "Python", "LangChain", "RAG"]);
-    expect(issues.some((issue) => issue.type === "em_dash")).toBe(true);
-    expect(issues.some((issue) => issue.type === "generic_phrase")).toBe(true);
+    expect(issues.some((issue) => issue.type === "dash_punctuation")).toBe(true);
+    expect(issues.some((issue) => issue.type === "formulaic_phrase")).toBe(true);
     expect(issues.some((issue) => issue.type === "repeated_verb")).toBe(true);
+    expect(issues.some((issue) => issue.type === "long_bullet")).toBe(true);
   });
 
   it("returns no QA issues for a clean keyword-covered profile", () => {
@@ -88,6 +90,12 @@ describe("resume tailoring helpers", () => {
     expect(escapeLatex("Built 20% faster R&D tools with $0 budget & TypeScript")).toContain("\\%");
     expect(escapeLatex("Built 20% faster R&D tools with $0 budget & TypeScript")).toContain("\\$");
     expect(escapeLatex("Built 20% faster R&D tools with $0 budget & TypeScript")).toContain("\\&");
+  });
+
+  it("sanitizes dash punctuation from generated bullets", () => {
+    expect(sanitizeBullet("Built workflows \u2014 tested outputs - shipped updates")).toBe(
+      "Built workflows, tested outputs, shipped updates"
+    );
   });
 
   it("renders a compilable resume skeleton", () => {

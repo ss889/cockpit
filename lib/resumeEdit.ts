@@ -6,7 +6,7 @@ export interface ResumeEdit {
   new_text: string;
 }
 
-const DASH_PATTERN = /[\u2014\u2013]/g;
+const DASH_PATTERN = /[\u2014\u2013]|\s-\s/g;
 
 export function applyResumeEdits(profile: ResumeProfile, edits: ResumeEdit[]): ResumeProfile {
   const normalized = new Map<string, string>();
@@ -38,7 +38,10 @@ export function editedLocations(edits: ResumeEdit[]): string[] {
 
 export function sanitizeBullet(value: string): string {
   return String(value || "")
-    .replace(DASH_PATTERN, "-")
+    .replace(DASH_PATTERN, ", ")
+    .replace(/^[\s\-•*]+/, "")
+    .replace(/\s+,/g, ",")
+    .replace(/,{2,}/g, ",")
     .replace(/\s+/g, " ")
     .trim();
 }

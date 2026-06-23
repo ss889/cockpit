@@ -69,7 +69,15 @@ export async function POST(request: NextRequest) {
 }
 
 function buildRefinePrompt(draftProfile: ResumeProfile, jd: string, keywords: string[]): string {
-  return `You are refining a tailored resume through conversation. The user will ask for specific changes. Make targeted edits only, never rewrite bullets that were not mentioned. Keep the same constraints as the original tailoring pass: no fabrication, no em dashes, no repeated verbs, no generic AI phrases.
+  return `You are refining a tailored resume through conversation. The user will ask for specific changes. Make targeted edits only, never rewrite bullets that were not mentioned.
+
+Style constraints:
+- No fabrication, no unsupported metrics, and no inflated claims
+- No dash punctuation in bullet text, including em dashes, en dashes, and spaced hyphens
+- No generic AI phrases such as leveraged, spearheaded, architected, robust, seamless, cutting-edge, utilize, synergy, end-to-end, scalable solution, innovative solution, results-driven, detail-oriented
+- Use plain human verbs and concrete nouns
+- Keep bullets one sentence and usually 18 to 28 words
+- Avoid copying the job description word-for-word unless the wording is a truthful skill or tool name
 
 Return edits only through the edit_resume_section tool. Locations must be exactly project:<id> or experience:<id>, and bullet_index is zero-based.
 

@@ -42,13 +42,17 @@ export async function POST(request: NextRequest) {
     let after = before;
     let autoFixed = false;
 
-    const fixable = before.filter((issue) => issue.location.includes(":"));
-    if (fixable.length > 0) {
-      const revised = await reviseFlaggedBullets(tailored, fixable);
+    for (let pass = 0; pass < 2; pass += 1) {
+      const fixable = after.filter((issue) => issue.location.includes(":"));
+      if (fixable.length === 0) break;
+
+      const revised = await reviseFlaggedBullets(finalProfile, fixable);
       if (revised) {
         finalProfile = revised;
         after = runQA(finalProfile, keywords);
         autoFixed = after.length < before.length;
+      } else {
+        break;
       }
     }
 
@@ -119,7 +123,7 @@ async function reviseFlaggedBullets(profile: ResumeProfile, issues: QAIssue[]): 
     model,
     max_tokens: 2048,
     system:
-      "Fix only these specific issues in the bullets below. Do not change anything else. Never invent facts, tools, metrics, or experience. Remove em dashes, avoid generic AI-sounding phrases, vary opening verbs, and keep each bullet one sentence.",
+      "Fix only these specific issues in the bullets below. Do not change anything else. Never invent facts, tools, metrics, or experience. Write like a careful human resume editor: plain verbs, concrete nouns, natural rhythm, no padded claims. Remove all dash punctuation, avoid formulaic AI phrases, vary opening verbs, keep each bullet one sentence, and keep bullets under 32 words when possible.",
     tools: [reviseResumeBulletsTool],
     tool_choice: { type: "tool", name: "revise_resume_bullets" },
     messages: [
@@ -191,9 +195,13 @@ Rules you must follow:
 - Never invent facts, tools, metrics, or experience not present in the base profile
 - Rephrase bullets to naturally incorporate the job description's language where the underlying fact supports it
 - Vary action verbs across bullets, do not repeat the same opening verb more than twice in the full resume
-- Do not use em dashes anywhere in bullet text
-- Avoid generic AI-sounding phrases: leveraged, spearheaded, architected, robust, seamless, cutting-edge, utilize, synergy
-- Keep each bullet as a single sentence, specific and concrete
+- Do not use dash punctuation in bullet text, including em dashes, en dashes, and spaced hyphens
+- Avoid generic AI-sounding phrases: leveraged, spearheaded, architected, robust, seamless, cutting-edge, utilize, synergy, end-to-end, scalable solution, innovative solution, results-driven, detail-oriented
+- Do not mirror the job description word-for-word; use only terms that fit the actual project or experience
+- Prefer plain human verbs such as built, improved, shipped, tested, cleaned, deployed, wrote, added, reduced, tracked, and documented
+- Keep each bullet as a single sentence, specific and concrete, usually 18 to 28 words
+- Include numbers only when they already exist in the base profile or are directly supported by it
+- Avoid inflated adjectives, marketing language, and vague claims about impact
 - If the base profile has more projects than reasonably fit, select the most relevant ones rather than including everything
 
 Base profile:
