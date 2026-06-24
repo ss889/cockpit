@@ -55,6 +55,84 @@ function newId(prefix: string): string {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
+function inferJobMetadata(text: string, url?: string, pageTitle?: string): { title: string; company: string } {
+  const lines = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const title =
+    matchLabeledValue(lines, /^(job\s*title|position|role|title)\s*[:\-]\s*(.+)$/i) ||
+    inferTitleFromPageTitle(pageTitle || "") ||
+    firstLikelyTitle(lines) ||
+    "Saved job";
+  const company =
+    matchLabeledValue(lines, /^(company|organization|employer)\s*[:\-]\s*(.+)$/i) ||
+    inferCompanyFromPageTitle(pageTitle || "") ||
+    inferCompanyFromUrl(url || "") ||
+    firstLikelyCompany(lines, title) ||
+    "Company not specified";
+
+  return { title, company };
+}
+
+function matchLabeledValue(lines: string[], pattern: RegExp): string {
+  for (const line of lines.slice(0, 20)) {
+    const match = line.match(pattern);
+    if (match?.[2]) return cleanMetadataValue(match[2]);
+  }
+  return "";
+}
+
+function firstLikelyTitle(lines: string[]): string {
+  const blocked = /^(about|overview|job description|description|responsibilities|requirements|qualifications|benefits|who we are|company)$/i;
+  const line = lines.find((item) => item.length >= 4 && item.length <= 90 && !blocked.test(item));
+  return line ? cleanMetadataValue(line) : "";
+}
+
+function firstLikelyCompany(lines: string[], title: string): string {
+  const titleIndex = lines.findIndex((line) => cleanMetadataValue(line) === title);
+  const candidate = titleIndex >= 0 ? lines[titleIndex + 1] : "";
+  if (!candidate || candidate.length > 70) return "";
+  if (/^(remote|hybrid|full-time|part-time|internship|contract|job description)$/i.test(candidate)) return "";
+  return cleanMetadataValue(candidate);
+}
+
+function inferTitleFromPageTitle(value: string): string {
+  const clean = cleanMetadataValue(value);
+  if (!clean) return "";
+  const parts = clean.split(/\s+(?:-|\u2013|\||at)\s+/i).map(cleanMetadataValue).filter(Boolean);
+  return parts[0] || "";
+}
+
+function inferCompanyFromPageTitle(value: string): string {
+  const clean = cleanMetadataValue(value);
+  if (!clean) return "";
+  const parts = clean.split(/\s+(?:-|\u2013|\||at)\s+/i).map(cleanMetadataValue).filter(Boolean);
+  return parts.length > 1 ? parts[parts.length - 1] : "";
+}
+
+function inferCompanyFromUrl(value: string): string {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.replace(/^www\./, "");
+    const pathParts = url.pathname.split("/").filter(Boolean);
+    if (host.includes("greenhouse.io") || host.includes("lever.co") || host.includes("ashbyhq.com")) {
+      return cleanMetadataValue(pathParts[0] || "");
+    }
+    return cleanMetadataValue(host.split(".")[0] || "");
+  } catch {
+    return "";
+  }
+}
+
+function cleanMetadataValue(value: string): string {
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/\s*\|\s*.*$/g, "")
+    .replace(/\s*-\s*(careers|jobs|greenhouse|lever|ashby|indeed).*$/i, "")
+    .trim();
+}
+
 export default function CockpitChat() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
@@ -341,10 +419,11 @@ export default function CockpitChat() {
 
   const saveJobDescriptionFromForm = () => {
     if (!canEditWorkspace || !jobForm.text.trim()) return;
+    const inferred = inferJobMetadata(jobForm.text, jobForm.url, jobForm.title);
     const entry: JobDescriptionEntry = {
       id: newId('jd'),
-      title: jobForm.title.trim() || 'Untitled job',
-      company: jobForm.company.trim() || 'Unknown company',
+      title: jobForm.title.trim() || inferred.title,
+      company: jobForm.company.trim() || inferred.company,
       url: jobForm.url.trim() || undefined,
       text: jobForm.text.trim(),
       createdAt: new Date().toISOString(),
@@ -366,10 +445,12 @@ export default function CockpitChat() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Failed to import job link');
+      const inferred = inferJobMetadata(data.text || '', data.url || jobForm.url, data.title || '');
 
       setJobForm((form) => ({
         ...form,
-        title: form.title || data.title || 'Imported job',
+        title: form.title || inferred.title,
+        company: form.company || inferred.company,
         url: data.url || form.url,
         text: data.text || '',
       }));
@@ -382,6 +463,18 @@ export default function CockpitChat() {
   const deleteJobDescription = (id: string) => {
     if (!canEditWorkspace) return;
     updateJobDescriptions((jobs) => jobs.filter((job) => job.id !== id));
+  };
+
+  const updateJobDescriptionText = (text: string) => {
+    setJobForm((form) => {
+      const inferred = inferJobMetadata(text, form.url, form.title);
+      return {
+        ...form,
+        text,
+        title: form.title || inferred.title,
+        company: form.company || inferred.company,
+      };
+    });
   };
 
   const downloadTextFile = (filename: string, text: string) => {
@@ -664,27 +757,6 @@ export default function CockpitChat() {
     }
   };
 
-  const handleTailorResume = async () => {
-    if (!tailorJd.trim()) return;
-    setTailorStatus('tailoring');
-    setTailorMessage('');
-    setTailoredLatex('');
-    setQaReport(null);
-    setTailorKeywords([]);
-
-    try {
-      const profile = baseResumeProfile || currentDraftProfile;
-      if (!profile) throw new Error('Set a base resume profile before tailoring.');
-      const data = await generateTailoredResume(profile, tailorJd);
-      appendAssistantMessage(
-        `Tailored resume ready.\n\nKeywords detected: ${(data.keywords || []).slice(0, 10).join(', ') || 'None'}\n\nQA after auto-fix: ${data.qa.after.length} issue(s). Use the Tailor Resume panel to download the .tex file.`
-      );
-    } catch (error) {
-      setTailorStatus('error');
-      setTailorMessage(error instanceof Error ? error.message : 'Failed to tailor resume');
-    }
-  };
-
   const downloadTailoredLatex = () => {
     const latestLatex = currentDraftProfile ? renderResumeLatex(currentDraftProfile) : tailoredLatex;
     if (!latestLatex) return;
@@ -780,7 +852,7 @@ export default function CockpitChat() {
             <div className="tailor-panel-header">
               <div>
                 <h2>Tailor Resume</h2>
-                <p>Set your base LaTeX resume once, then generate a job-specific .tex draft.</p>
+                <p>Set your base LaTeX resume once. Add and tailor job descriptions from Workspace.</p>
               </div>
               <button className="tailor-close" onClick={() => setTailorOpen(false)} title="Close Tailor Resume">
                 <X size={16} />
@@ -797,23 +869,11 @@ export default function CockpitChat() {
                   rows={7}
                 />
               </label>
-              <label className="tailor-field">
-                <span>Target job description</span>
-                <textarea
-                  value={tailorJd}
-                  onChange={(event) => setTailorJd(event.target.value)}
-                  placeholder="Paste the job description you want to tailor toward..."
-                  rows={7}
-                />
-              </label>
             </div>
 
             <div className="tailor-actions">
               <button onClick={handleIngestResume} disabled={tailorStatus === 'ingesting' || !baseResumeLatex.trim()}>
                 {tailorStatus === 'ingesting' ? 'Saving...' : 'Set as Base Profile'}
-              </button>
-              <button onClick={handleTailorResume} disabled={tailorStatus === 'tailoring' || !tailorJd.trim() || (!baseResumeProfile && !currentDraftProfile)}>
-                {tailorStatus === 'tailoring' ? 'Tailoring...' : 'Tailor Resume'}
               </button>
               <button onClick={downloadTailoredLatex} disabled={!tailoredLatex}>
                 Download .tex
@@ -1178,10 +1238,17 @@ export default function CockpitChat() {
               <span>{jobDescriptions.length}</span>
             </div>
             <div className="workspace-form">
+              <textarea
+                value={jobForm.text}
+                onChange={(event) => updateJobDescriptionText(event.target.value)}
+                placeholder="Paste the job description here. Title and company will be inferred when possible."
+                rows={7}
+                disabled={!canEditWorkspace}
+              />
               <input
                 value={jobForm.url}
                 onChange={(event) => setJobForm((form) => ({ ...form, url: event.target.value }))}
-                placeholder="Job link"
+                placeholder="Job link (optional)"
                 disabled={!canEditWorkspace}
               />
               <button onClick={importJobFromUrl} disabled={!canEditWorkspace || !jobForm.url.trim()}>
@@ -1191,20 +1258,13 @@ export default function CockpitChat() {
               <input
                 value={jobForm.title}
                 onChange={(event) => setJobForm((form) => ({ ...form, title: event.target.value }))}
-                placeholder="Job title"
+                placeholder="Job title (auto)"
                 disabled={!canEditWorkspace}
               />
               <input
                 value={jobForm.company}
                 onChange={(event) => setJobForm((form) => ({ ...form, company: event.target.value }))}
-                placeholder="Company"
-                disabled={!canEditWorkspace}
-              />
-              <textarea
-                value={jobForm.text}
-                onChange={(event) => setJobForm((form) => ({ ...form, text: event.target.value }))}
-                placeholder="Paste or import the job description..."
-                rows={7}
+                placeholder="Company (auto)"
                 disabled={!canEditWorkspace}
               />
               <button onClick={saveJobDescriptionFromForm} disabled={!canEditWorkspace || !jobForm.text.trim()}>
