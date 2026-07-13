@@ -272,6 +272,83 @@ export const reviseResumeBulletsTool = {
   },
 };
 
+export const interviewPrepTool = {
+  name: "generate_interview_prep",
+  description: "Generate a job-specific interview preparation packet from a resume profile and saved job description",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      role_summary: {
+        type: "string",
+        description: "One concise paragraph summarizing what this role appears to value most",
+      },
+      likely_screen_questions: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 5,
+        maxItems: 8,
+      },
+      technical_questions: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 5,
+        maxItems: 8,
+      },
+      behavioral_questions: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 5,
+        maxItems: 8,
+      },
+      talking_points: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 4,
+        maxItems: 7,
+      },
+      gap_brief: {
+        type: "array",
+        items: { type: "string" },
+        minItems: 3,
+        maxItems: 5,
+      },
+      tell_me_about_yourself: {
+        type: "string",
+        description: "A natural 60 to 90 second answer draft",
+      },
+      why_this_role: {
+        type: "string",
+        description: "A natural answer draft grounded in the job description and resume profile",
+      },
+      stories: {
+        type: "array",
+        minItems: 3,
+        maxItems: 5,
+        items: {
+          type: "object",
+          properties: {
+            prompt: { type: "string" },
+            answer_outline: { type: "string" },
+            resume_evidence: { type: "string" },
+          },
+          required: ["prompt", "answer_outline", "resume_evidence"],
+        },
+      },
+    },
+    required: [
+      "role_summary",
+      "likely_screen_questions",
+      "technical_questions",
+      "behavioral_questions",
+      "talking_points",
+      "gap_brief",
+      "tell_me_about_yourself",
+      "why_this_role",
+      "stories",
+    ],
+  },
+};
+
 export const editResumeTool = {
   name: "edit_resume_section",
   description: "Make a targeted edit to a specific bullet or section based on the user's request",

@@ -1,9 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { renderInterviewPrepMarkdown } from "@/lib/interviewPrep";
 import { extractKeywordsFallback } from "@/lib/ollama";
 import { escapeLatex, renderResumeLatex } from "@/lib/renderLatex";
 import { applyResumeEdits, sanitizeBullet } from "@/lib/resumeEdit";
 import { runQA } from "@/lib/resumeQA";
 import type { ResumeProfile } from "@/types/profile";
+import type { InterviewPrepPacket } from "@/types/workspace";
 
 const sampleProfile: ResumeProfile = {
   header: {
@@ -140,5 +142,32 @@ describe("resume tailoring helpers", () => {
       "Improved Claude API revision planning for tailored content workflows."
     );
     expect(updated.experience[0].bullets).toEqual(sampleProfile.experience[0].bullets);
+  });
+
+  it("renders interview prep packets as portable markdown", () => {
+    const prep: InterviewPrepPacket = {
+      generatedAt: "2026-07-13T12:00:00.000Z",
+      roleSummary: "This role values practical AI product work.",
+      likelyScreenQuestions: ["Tell me about your AI projects."],
+      technicalQuestions: ["How would you evaluate an LLM workflow?"],
+      behavioralQuestions: ["Tell me about a time you handled ambiguity."],
+      talkingPoints: ["Connect JobOps AI to the role."],
+      gapBrief: ["Be honest about TensorFlow depth."],
+      tellMeAboutYourself: "I build applied AI tools with TypeScript and Python.",
+      whyThisRole: "This role matches my interest in applied AI systems.",
+      stories: [
+        {
+          prompt: "Debugging story",
+          answerOutline: "Situation, action, result from JobOps AI.",
+          resumeEvidence: "JobOps AI and Claude API pipeline work.",
+        },
+      ],
+    };
+
+    const markdown = renderInterviewPrepMarkdown("AI Engineer Intern", "The Muse", prep);
+    expect(markdown).toContain("# Interview Prep: AI Engineer Intern at The Muse");
+    expect(markdown).toContain("## Technical Questions");
+    expect(markdown).toContain("- How would you evaluate an LLM workflow?");
+    expect(markdown).toContain("### Story 1: Debugging story");
   });
 });

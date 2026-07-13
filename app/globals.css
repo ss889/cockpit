@@ -173,6 +173,89 @@ body {
   transform: translateY(-2px);
 }
 
+.workspace-home {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 860px;
+  margin: 2rem auto;
+}
+
+.workspace-home-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(220px, 0.65fr);
+  gap: 1rem;
+  align-items: stretch;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.workspace-home-kicker {
+  display: block;
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  margin-bottom: 0.55rem;
+}
+
+.workspace-home h2 {
+  font-family: var(--font-display);
+  font-size: 1.45rem;
+  line-height: 1.25;
+  margin-bottom: 0.5rem;
+}
+
+.workspace-home p {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.workspace-home-actions {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.75rem;
+}
+
+.workspace-home-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.workspace-home-stat {
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+}
+
+.workspace-home-stat span {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.workspace-home-stat strong {
+  display: block;
+  margin: 0.35rem 0;
+  font-size: 1.45rem;
+}
+
+.example-prompts.compact {
+  max-width: none;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.workspace-home .example-prompt {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 48px;
+}
+
 /* Messages List */
 .messages-list {
   display: flex;
@@ -398,6 +481,12 @@ body {
   }
 
   .example-prompts {
+    grid-template-columns: 1fr;
+  }
+
+  .workspace-home-main,
+  .workspace-home-grid,
+  .example-prompts.compact {
     grid-template-columns: 1fr;
   }
 }
@@ -976,13 +1065,28 @@ body {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 26px;
+  min-width: 26px;
   height: 26px;
+  padding: 0 0.45rem;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
   color: var(--text-secondary);
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 700;
   cursor: pointer;
+}
+
+.workspace-card-tools {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.workspace-edit-form {
+  margin-top: 0.75rem;
 }
 
 .workspace-card p {
@@ -1014,6 +1118,47 @@ body {
 
 .workspace-error {
   color: #b91c1c;
+}
+
+.interview-prep-preview {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+.interview-prep-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.interview-prep-header strong {
+  font-size: 0.82rem;
+}
+
+.interview-prep-header span,
+.prep-section span {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.prep-section {
+  margin-top: 0.7rem;
+}
+
+.prep-section ul {
+  margin: 0.4rem 0 0 1rem;
+}
+
+.prep-section li {
+  color: var(--text-primary);
+  font-size: 0.76rem;
+  line-height: 1.45;
+  margin-bottom: 0.3rem;
 }
 
 /* Profile Page */

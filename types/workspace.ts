@@ -18,6 +18,25 @@ export type MemoryEntry = {
   createdAt: string;
 };
 
+export type InterviewPrepStory = {
+  prompt: string;
+  answerOutline: string;
+  resumeEvidence: string;
+};
+
+export type InterviewPrepPacket = {
+  generatedAt: string;
+  roleSummary: string;
+  likelyScreenQuestions: string[];
+  technicalQuestions: string[];
+  behavioralQuestions: string[];
+  talkingPoints: string[];
+  gapBrief: string[];
+  tellMeAboutYourself: string;
+  whyThisRole: string;
+  stories: InterviewPrepStory[];
+};
+
 export type JobDescriptionEntry = {
   id: string;
   title: string;
@@ -29,6 +48,9 @@ export type JobDescriptionEntry = {
   tailoredAt?: string;
   status?: "saved" | "tailoring" | "ready" | "error";
   error?: string;
+  interviewPrep?: InterviewPrepPacket;
+  prepStatus?: "idle" | "generating" | "ready" | "error";
+  prepError?: string;
 };
 
 export type LocalWorkspace = {
