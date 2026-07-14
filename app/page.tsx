@@ -733,6 +733,124 @@ export default function CockpitChat() {
     );
   };
 
+  const renderSavedJobCard = (job: JobDescriptionEntry, compact = false) => (
+    <article key={job.id} className={`workspace-card ${compact ? 'workspace-card-compact' : ''}`}>
+      {editingJobId === job.id ? (
+        <>
+          <div className="workspace-card-header">
+            <strong>Edit job description</strong>
+            <button onClick={cancelEditingJobDescription} title="Cancel editing">
+              <X size={14} />
+            </button>
+          </div>
+          <div className="workspace-form workspace-edit-form">
+            <input
+              value={editingJobForm.title}
+              onChange={(event) => setEditingJobForm((form) => ({ ...form, title: event.target.value }))}
+              placeholder="Job title"
+              disabled={!canEditWorkspace}
+            />
+            <input
+              value={editingJobForm.company}
+              onChange={(event) => setEditingJobForm((form) => ({ ...form, company: event.target.value }))}
+              placeholder="Company"
+              disabled={!canEditWorkspace}
+            />
+            <input
+              value={editingJobForm.url}
+              onChange={(event) => setEditingJobForm((form) => ({ ...form, url: event.target.value }))}
+              placeholder="Job link"
+              disabled={!canEditWorkspace}
+            />
+            <textarea
+              value={editingJobForm.text}
+              onChange={(event) => updateEditingJobText(event.target.value)}
+              placeholder="Job description"
+              rows={compact ? 6 : 8}
+              disabled={!canEditWorkspace}
+            />
+          </div>
+          <div className="workspace-card-actions">
+            <button onClick={() => saveEditingJobDescription(job)} disabled={!canEditWorkspace || !editingJobForm.text.trim()}>
+              Save Changes
+            </button>
+            <button onClick={cancelEditingJobDescription}>
+              Cancel
+            </button>
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="workspace-card-header">
+            <strong>{job.title}</strong>
+            {canEditWorkspace && (
+              <div className="workspace-card-tools">
+                <button onClick={() => startEditingJobDescription(job)} title="Edit job description">
+                  Edit
+                </button>
+                <button onClick={() => deleteJobDescription(job.id)} title="Delete job description">
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+          <span>{job.company}{job.status ? ` - ${job.status}` : ''}</span>
+          {job.url && (
+            <a href={job.url} target="_blank" rel="noopener noreferrer">
+              {job.url}
+            </a>
+          )}
+          <p>{job.text.slice(0, compact ? 220 : 360)}{job.text.length > (compact ? 220 : 360) ? '...' : ''}</p>
+          {job.error && <p className="workspace-error">{job.error}</p>}
+          {job.prepError && <p className="workspace-error">{job.prepError}</p>}
+          <div className="workspace-card-actions">
+            <button onClick={() => tailorSavedJob(job)} disabled={!canEditWorkspace || job.status === 'tailoring' || (!baseResumeProfile && !currentDraftProfile)}>
+              {job.status === 'tailoring' ? 'Tailoring...' : 'Tailor'}
+            </button>
+            <button
+              onClick={() => job.tailoredLatex && downloadTextFile(`${safeFilename(job.title, 'tailored')}-resume.tex`, job.tailoredLatex)}
+              disabled={!job.tailoredLatex}
+            >
+              Download .tex
+            </button>
+            <button onClick={() => generateInterviewPrep(job)} disabled={!canEditWorkspace || job.prepStatus === 'generating' || (!baseResumeProfile && !currentDraftProfile)}>
+              <MessageSquareText size={15} />
+              {job.prepStatus === 'generating' ? 'Prepping...' : 'Prep'}
+            </button>
+            <button onClick={() => downloadInterviewPrep(job)} disabled={!job.interviewPrep}>
+              Download Prep
+            </button>
+          </div>
+          {job.interviewPrep && !compact && (
+            <div className="interview-prep-preview">
+              <div className="interview-prep-header">
+                <strong>Interview Prep</strong>
+                <span>{new Date(job.interviewPrep.generatedAt).toLocaleDateString()}</span>
+              </div>
+              <p>{job.interviewPrep.roleSummary}</p>
+              <div className="prep-section">
+                <span>Talking points</span>
+                <ul>
+                  {job.interviewPrep.talkingPoints.slice(0, 4).map((point) => (
+                    <li key={point}>{point}</li>
+                  ))}
+                </ul>
+              </div>
+              <div className="prep-section">
+                <span>Likely questions</span>
+                <ul>
+                  {job.interviewPrep.likelyScreenQuestions.slice(0, 4).map((question) => (
+                    <li key={question}>{question}</li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </article>
+  );
+
   const handleChatTailorRequest = async (jdText: string, resumeSource?: string) => {
     setTailorOpen(true);
     setTailorStatus(resumeSource ? 'ingesting' : 'tailoring');
@@ -1178,7 +1296,7 @@ export default function CockpitChat() {
 
             <div className="example-prompts compact">
               <button onClick={() => setWorkspaceOpen(true)} className="example-prompt">
-                Paste a job description
+                Open full workspace
               </button>
               <button onClick={() => setInput('Help me prepare for interviews from my saved jobs.')} className="example-prompt">
                 Ask prep question
@@ -1187,6 +1305,88 @@ export default function CockpitChat() {
                 Career advice
               </button>
             </div>
+
+            <section className="home-workspace-board">
+              <div className="home-workspace-panel">
+                <div className="workspace-section-title">
+                  <h3>Paste Job Description</h3>
+                  <span>{canEditWorkspace ? 'Ready' : 'Sign in'}</span>
+                </div>
+                {!session && (
+                  <div className="workspace-form home-login">
+                    <input
+                      value={loginName}
+                      onChange={(event) => setLoginName(event.target.value)}
+                      placeholder="Workspace name"
+                    />
+                    <select value={loginRole} onChange={(event) => setLoginRole(event.target.value as WorkspaceRole)}>
+                      <option value="owner">Owner</option>
+                      <option value="editor">Editor</option>
+                      <option value="viewer">Viewer</option>
+                    </select>
+                    <button onClick={signInWorkspace} disabled={!loginName.trim()}>
+                      Sign in
+                    </button>
+                  </div>
+                )}
+                <div className="workspace-form">
+                  <textarea
+                    value={jobForm.text}
+                    onChange={(event) => updateJobDescriptionText(event.target.value)}
+                    placeholder="Paste the job description here. Title and company will be inferred when possible."
+                    rows={8}
+                    disabled={!canEditWorkspace}
+                  />
+                  <input
+                    value={jobForm.url}
+                    onChange={(event) => setJobForm((form) => ({ ...form, url: event.target.value }))}
+                    placeholder="Job link (optional)"
+                    disabled={!canEditWorkspace}
+                  />
+                  <div className="home-form-row">
+                    <input
+                      value={jobForm.title}
+                      onChange={(event) => setJobForm((form) => ({ ...form, title: event.target.value }))}
+                      placeholder="Job title (auto)"
+                      disabled={!canEditWorkspace}
+                    />
+                    <input
+                      value={jobForm.company}
+                      onChange={(event) => setJobForm((form) => ({ ...form, company: event.target.value }))}
+                      placeholder="Company (auto)"
+                      disabled={!canEditWorkspace}
+                    />
+                  </div>
+                  <div className="workspace-card-actions">
+                    <button onClick={saveJobDescriptionFromForm} disabled={!canEditWorkspace || !jobForm.text.trim()}>
+                      Save JD
+                    </button>
+                    <button onClick={importJobFromUrl} disabled={!canEditWorkspace || !jobForm.url.trim()}>
+                      <LinkIcon size={15} />
+                      Import Link
+                    </button>
+                    <button onClick={tailorAllSavedJobs} disabled={!canEditWorkspace || jobDescriptions.length === 0 || (!baseResumeProfile && !currentDraftProfile)}>
+                      Tailor All
+                    </button>
+                  </div>
+                </div>
+                {jobLibraryStatus && <p className="workspace-status">{jobLibraryStatus}</p>}
+              </div>
+
+              <div className="home-workspace-panel">
+                <div className="workspace-section-title">
+                  <h3>Saved Jobs</h3>
+                  <span>{jobDescriptions.length}</span>
+                </div>
+                <div className="workspace-list">
+                  {jobDescriptions.length === 0 ? (
+                    <p className="workspace-empty">No job descriptions saved yet.</p>
+                  ) : (
+                    jobDescriptions.slice(0, 4).map((job) => renderSavedJobCard(job, true))
+                  )}
+                </div>
+              </div>
+            </section>
           </div>
         ) : (
           <div className="messages-list">
@@ -1427,123 +1627,7 @@ export default function CockpitChat() {
               {jobDescriptions.length === 0 ? (
                 <p className="workspace-empty">No job descriptions saved yet.</p>
               ) : (
-                jobDescriptions.map((job) => (
-                  <article key={job.id} className="workspace-card">
-                    {editingJobId === job.id ? (
-                      <>
-                        <div className="workspace-card-header">
-                          <strong>Edit job description</strong>
-                          <button onClick={cancelEditingJobDescription} title="Cancel editing">
-                            <X size={14} />
-                          </button>
-                        </div>
-                        <div className="workspace-form workspace-edit-form">
-                          <input
-                            value={editingJobForm.title}
-                            onChange={(event) => setEditingJobForm((form) => ({ ...form, title: event.target.value }))}
-                            placeholder="Job title"
-                            disabled={!canEditWorkspace}
-                          />
-                          <input
-                            value={editingJobForm.company}
-                            onChange={(event) => setEditingJobForm((form) => ({ ...form, company: event.target.value }))}
-                            placeholder="Company"
-                            disabled={!canEditWorkspace}
-                          />
-                          <input
-                            value={editingJobForm.url}
-                            onChange={(event) => setEditingJobForm((form) => ({ ...form, url: event.target.value }))}
-                            placeholder="Job link"
-                            disabled={!canEditWorkspace}
-                          />
-                          <textarea
-                            value={editingJobForm.text}
-                            onChange={(event) => updateEditingJobText(event.target.value)}
-                            placeholder="Job description"
-                            rows={8}
-                            disabled={!canEditWorkspace}
-                          />
-                        </div>
-                        <div className="workspace-card-actions">
-                          <button onClick={() => saveEditingJobDescription(job)} disabled={!canEditWorkspace || !editingJobForm.text.trim()}>
-                            Save Changes
-                          </button>
-                          <button onClick={cancelEditingJobDescription}>
-                            Cancel
-                          </button>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="workspace-card-header">
-                          <strong>{job.title}</strong>
-                          {canEditWorkspace && (
-                            <div className="workspace-card-tools">
-                              <button onClick={() => startEditingJobDescription(job)} title="Edit job description">
-                                Edit
-                              </button>
-                              <button onClick={() => deleteJobDescription(job.id)} title="Delete job description">
-                                <X size={14} />
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                        <span>{job.company}{job.status ? ` - ${job.status}` : ''}</span>
-                        {job.url && (
-                          <a href={job.url} target="_blank" rel="noopener noreferrer">
-                            {job.url}
-                          </a>
-                        )}
-                        <p>{job.text.slice(0, 360)}{job.text.length > 360 ? '...' : ''}</p>
-                        {job.error && <p className="workspace-error">{job.error}</p>}
-                        {job.prepError && <p className="workspace-error">{job.prepError}</p>}
-                        <div className="workspace-card-actions">
-                          <button onClick={() => tailorSavedJob(job)} disabled={!canEditWorkspace || job.status === 'tailoring' || (!baseResumeProfile && !currentDraftProfile)}>
-                            {job.status === 'tailoring' ? 'Tailoring...' : 'Tailor'}
-                          </button>
-                          <button
-                            onClick={() => job.tailoredLatex && downloadTextFile(`${safeFilename(job.title, 'tailored')}-resume.tex`, job.tailoredLatex)}
-                            disabled={!job.tailoredLatex}
-                          >
-                            Download .tex
-                          </button>
-                          <button onClick={() => generateInterviewPrep(job)} disabled={!canEditWorkspace || job.prepStatus === 'generating' || (!baseResumeProfile && !currentDraftProfile)}>
-                            <MessageSquareText size={15} />
-                            {job.prepStatus === 'generating' ? 'Prepping...' : 'Prep'}
-                          </button>
-                          <button onClick={() => downloadInterviewPrep(job)} disabled={!job.interviewPrep}>
-                            Download Prep
-                          </button>
-                        </div>
-                        {job.interviewPrep && (
-                          <div className="interview-prep-preview">
-                            <div className="interview-prep-header">
-                              <strong>Interview Prep</strong>
-                              <span>{new Date(job.interviewPrep.generatedAt).toLocaleDateString()}</span>
-                            </div>
-                            <p>{job.interviewPrep.roleSummary}</p>
-                            <div className="prep-section">
-                              <span>Talking points</span>
-                              <ul>
-                                {job.interviewPrep.talkingPoints.slice(0, 4).map((point) => (
-                                  <li key={point}>{point}</li>
-                                ))}
-                              </ul>
-                            </div>
-                            <div className="prep-section">
-                              <span>Likely questions</span>
-                              <ul>
-                                {job.interviewPrep.likelyScreenQuestions.slice(0, 4).map((question) => (
-                                  <li key={question}>{question}</li>
-                                ))}
-                              </ul>
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </article>
-                ))
+                jobDescriptions.map((job) => renderSavedJobCard(job))
               )}
             </div>
           </section>

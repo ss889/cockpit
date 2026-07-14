@@ -256,6 +256,32 @@ body {
   min-height: 48px;
 }
 
+.home-workspace-board {
+  display: grid;
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.home-workspace-panel {
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+}
+
+.home-login {
+  margin-bottom: 0.75rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.home-form-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
 /* Messages List */
 .messages-list {
   display: flex;
@@ -486,7 +512,9 @@ body {
 
   .workspace-home-main,
   .workspace-home-grid,
-  .example-prompts.compact {
+  .example-prompts.compact,
+  .home-workspace-board,
+  .home-form-row {
     grid-template-columns: 1fr;
   }
 }
@@ -1059,6 +1087,14 @@ body {
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg);
+}
+
+.workspace-card-compact .workspace-card-actions {
+  gap: 0.45rem;
+}
+
+.workspace-card-compact .workspace-card-actions button {
+  padding: 0.48rem 0.58rem;
 }
 
 .workspace-card-header button {
