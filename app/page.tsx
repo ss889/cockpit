@@ -1097,7 +1097,7 @@ export default function CockpitChat() {
       </header>
 
       {/* Chat Container */}
-      <div className={`chat-container ${tailorOpen ? 'with-tailor-panel' : ''}`}>
+      <div className={`chat-container ${tailorOpen ? 'with-tailor-panel' : ''} ${messages.length === 0 ? 'home-mode' : ''}`}>
         {tailorOpen && (
           <section className="tailor-panel" aria-label="Tailor resume">
             <div className="tailor-panel-header">
@@ -1257,59 +1257,51 @@ export default function CockpitChat() {
 
         {/* Welcome State */}
         {messages.length === 0 ? (
-          <div className="workspace-home">
-            <section className="workspace-home-main">
+          <div className="studio-home">
+            <section className="studio-hero">
               <div>
                 <span className="workspace-home-kicker">Local Career Workspace</span>
                 <h2>Build the packet for the next application.</h2>
-                <p>Save JDs, generate tailored ATS-friendly LaTeX resumes, and create job-specific interview prep from your resume profile.</p>
+                <p>Save job descriptions, tailor LaTeX resumes, and generate interview prep from one grounded workspace.</p>
               </div>
-              <div className="workspace-home-actions">
-                <button onClick={() => setWorkspaceOpen(true)} className="example-prompt">
-                  <Brain size={16} />
-                  Open Workspace
-                </button>
-                <button onClick={() => setTailorOpen(true)} className="example-prompt">
+              <div className="studio-actions">
+                <button onClick={() => setTailorOpen(true)} className="studio-action-button">
                   <FileText size={16} />
                   Set Base Resume
                 </button>
+                <button onClick={() => setWorkspaceOpen(true)} className="studio-action-button">
+                  <Brain size={16} />
+                  Workspace
+                </button>
               </div>
             </section>
 
-            <section className="workspace-home-grid">
-              <article className="workspace-home-stat">
+            <section className="studio-status-strip" aria-label="Workspace status">
+              <div>
                 <span>Saved JDs</span>
                 <strong>{jobDescriptions.length}</strong>
-                <p>{jobDescriptions.filter((job) => job.tailoredLatex).length} tailored resume drafts ready</p>
-              </article>
-              <article className="workspace-home-stat">
+              </div>
+              <div>
+                <span>Resume Drafts</span>
+                <strong>{jobDescriptions.filter((job) => job.tailoredLatex).length}</strong>
+              </div>
+              <div>
                 <span>Interview Kits</span>
                 <strong>{jobDescriptions.filter((job) => job.interviewPrep).length}</strong>
-                <p>Prep packets saved beside each job description</p>
-              </article>
-              <article className="workspace-home-stat">
+              </div>
+              <div>
                 <span>Memory Notes</span>
                 <strong>{memories.length}</strong>
-                <p>Reusable context for tailoring and interview answers</p>
-              </article>
+              </div>
             </section>
 
-            <div className="example-prompts compact">
-              <button onClick={() => setWorkspaceOpen(true)} className="example-prompt">
-                Open full workspace
-              </button>
-              <button onClick={() => setInput('Help me prepare for interviews from my saved jobs.')} className="example-prompt">
-                Ask prep question
-              </button>
-              <button onClick={() => setInput('What skills should I focus on for AI engineering roles?')} className="example-prompt">
-                Career advice
-              </button>
-            </div>
-
-            <section className="home-workspace-board">
-              <div className="home-workspace-panel">
-                <div className="workspace-section-title">
-                  <h3>Paste Job Description</h3>
+            <section className="studio-board">
+              <div className="studio-panel studio-panel-compose">
+                <div className="studio-panel-header">
+                  <div>
+                    <span>Compose</span>
+                    <h3>Paste Job Description</h3>
+                  </div>
                   <span>{canEditWorkspace ? 'Ready' : 'Sign in'}</span>
                 </div>
                 {!session && (
@@ -1334,15 +1326,21 @@ export default function CockpitChat() {
                     value={jobForm.text}
                     onChange={(event) => updateJobDescriptionText(event.target.value)}
                     placeholder="Paste the job description here. Title and company will be inferred when possible."
-                    rows={8}
+                    rows={10}
                     disabled={!canEditWorkspace}
                   />
-                  <input
-                    value={jobForm.url}
-                    onChange={(event) => setJobForm((form) => ({ ...form, url: event.target.value }))}
-                    placeholder="Job link (optional)"
-                    disabled={!canEditWorkspace}
-                  />
+                  <div className="home-form-row">
+                    <input
+                      value={jobForm.url}
+                      onChange={(event) => setJobForm((form) => ({ ...form, url: event.target.value }))}
+                      placeholder="Job link (optional)"
+                      disabled={!canEditWorkspace}
+                    />
+                    <button onClick={importJobFromUrl} disabled={!canEditWorkspace || !jobForm.url.trim()}>
+                      <LinkIcon size={15} />
+                      Import Link
+                    </button>
+                  </div>
                   <div className="home-form-row">
                     <input
                       value={jobForm.title}
@@ -1357,35 +1355,56 @@ export default function CockpitChat() {
                       disabled={!canEditWorkspace}
                     />
                   </div>
-                  <div className="workspace-card-actions">
+                  <div className="studio-command-row">
                     <button onClick={saveJobDescriptionFromForm} disabled={!canEditWorkspace || !jobForm.text.trim()}>
                       Save JD
                     </button>
-                    <button onClick={importJobFromUrl} disabled={!canEditWorkspace || !jobForm.url.trim()}>
-                      <LinkIcon size={15} />
-                      Import Link
-                    </button>
                     <button onClick={tailorAllSavedJobs} disabled={!canEditWorkspace || jobDescriptions.length === 0 || (!baseResumeProfile && !currentDraftProfile)}>
-                      Tailor All
+                      Tailor All Saved
                     </button>
                   </div>
                 </div>
                 {jobLibraryStatus && <p className="workspace-status">{jobLibraryStatus}</p>}
               </div>
 
-              <div className="home-workspace-panel">
-                <div className="workspace-section-title">
-                  <h3>Saved Jobs</h3>
-                  <span>{jobDescriptions.length}</span>
+              <aside className="studio-side">
+                <div className="studio-panel">
+                  <div className="studio-panel-header">
+                    <div>
+                      <span>Library</span>
+                      <h3>Saved Jobs</h3>
+                    </div>
+                    <span>{jobDescriptions.length}</span>
+                  </div>
+                  <div className="workspace-list">
+                    {jobDescriptions.length === 0 ? (
+                      <p className="workspace-empty">No job descriptions saved yet.</p>
+                    ) : (
+                      jobDescriptions.slice(0, 3).map((job) => renderSavedJobCard(job, true))
+                    )}
+                  </div>
                 </div>
-                <div className="workspace-list">
-                  {jobDescriptions.length === 0 ? (
-                    <p className="workspace-empty">No job descriptions saved yet.</p>
-                  ) : (
-                    jobDescriptions.slice(0, 4).map((job) => renderSavedJobCard(job, true))
-                  )}
+
+                <div className="studio-panel studio-panel-quiet">
+                  <div className="studio-panel-header">
+                    <div>
+                      <span>Assistant</span>
+                      <h3>Ask Laterally</h3>
+                    </div>
+                  </div>
+                  <div className="studio-link-list">
+                    <button onClick={() => setInput('Help me prepare for interviews from my saved jobs.')}>
+                      Interview prep from saved jobs
+                    </button>
+                    <button onClick={() => setInput('What skills should I focus on for AI engineering roles?')}>
+                      Skill focus for AI roles
+                    </button>
+                    <button onClick={() => setWorkspaceOpen(true)}>
+                      Open full workspace
+                    </button>
+                  </div>
                 </div>
-              </div>
+              </aside>
             </section>
           </div>
         ) : (

@@ -117,6 +117,11 @@ body {
   margin-right: calc(min(560px, 36vw) + 2rem);
 }
 
+.chat-container.home-mode {
+  max-width: 1180px;
+  padding: 2rem 2rem 7rem;
+}
+
 /* Welcome State */
 .welcome-state {
   display: flex;
@@ -173,20 +178,22 @@ body {
   transform: translateY(-2px);
 }
 
+.studio-home,
 .workspace-home {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  max-width: 860px;
-  margin: 2rem auto;
+  gap: 1.25rem;
+  width: 100%;
+  margin: 0 auto;
 }
 
+.studio-hero,
 .workspace-home-main {
   display: grid;
   grid-template-columns: minmax(0, 1.5fr) minmax(220px, 0.65fr);
-  gap: 1rem;
+  gap: 1.5rem;
   align-items: stretch;
-  padding-bottom: 1rem;
+  padding-bottom: 1.25rem;
   border-bottom: 1px solid var(--border);
 }
 
@@ -199,29 +206,79 @@ body {
   margin-bottom: 0.55rem;
 }
 
+.studio-home h2,
 .workspace-home h2 {
   font-family: var(--font-display);
-  font-size: 1.45rem;
+  font-size: 1.65rem;
   line-height: 1.25;
   margin-bottom: 0.5rem;
 }
 
+.studio-home p,
 .workspace-home p {
   color: var(--text-secondary);
   font-size: 0.84rem;
   line-height: 1.5;
 }
 
+.studio-actions,
 .workspace-home-actions {
   display: grid;
   grid-template-columns: 1fr;
   gap: 0.75rem;
 }
 
+.studio-action-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-height: 56px;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.studio-action-button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.studio-status-strip,
 .workspace-home-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+}
+
+.studio-status-strip div {
+  padding: 0.85rem 1rem;
+  border-right: 1px solid var(--border);
+}
+
+.studio-status-strip div:last-child {
+  border-right: 0;
+}
+
+.studio-status-strip span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.studio-status-strip strong {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 1.25rem;
 }
 
 .workspace-home-stat {
@@ -254,6 +311,93 @@ body {
   align-items: center;
   gap: 0.5rem;
   min-height: 48px;
+}
+
+.studio-board {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(340px, 0.85fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.studio-side {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.studio-panel {
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+}
+
+.studio-panel-compose {
+  border-top: 0;
+}
+
+.studio-panel-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.studio-panel-header span {
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.studio-panel-header h3 {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.studio-command-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.studio-command-row button,
+.studio-link-list button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.studio-command-row button:hover:not(:disabled),
+.studio-link-list button:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.studio-command-row button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.studio-link-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.studio-link-list button {
+  justify-content: flex-start;
+  background: transparent;
 }
 
 .home-workspace-board {
@@ -511,11 +655,29 @@ body {
   }
 
   .workspace-home-main,
+  .studio-hero,
+  .studio-board,
   .workspace-home-grid,
   .example-prompts.compact,
   .home-workspace-board,
   .home-form-row {
     grid-template-columns: 1fr;
+  }
+
+  .chat-container.home-mode {
+    padding: 1rem 1rem 6.5rem;
+  }
+
+  .studio-status-strip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .studio-status-strip div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .studio-status-strip div:nth-child(-n + 2) {
+    border-bottom: 1px solid var(--border);
   }
 }
 
