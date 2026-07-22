@@ -8,6 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest",
+    "evals": "vitest --run tests/evals",
+    "mcp:jobops": "node ./scripts/mcp-jobops.mjs",
+    "mcp:self-test": "node ./scripts/mcp-jobops.mjs --self-test",
     "smoke:defer": "node ./scripts/smoke-defer.mjs",
     "worker": "node .worker-dist/lib/worker.js",
     "worker:dev": "ts-node ./lib/worker.ts"
