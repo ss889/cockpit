@@ -1,102 +1,128 @@
-# AI Career Cockpit
+# JobOps AI
 
-AI Career Cockpit is a full-stack example application that analyzes job descriptions and provides structured, actionable guidance to help candidates understand role requirements, identify skill gaps, and receive targeted project suggestions to improve fit.
+JobOps AI is a local-first career workspace for managing job descriptions, tailoring LaTeX resumes, and preparing for interviews with AI assistance.
 
-This README focuses on what the project does, how it works, and how to run it locally or deploy it.
+The app is built for a personal job-search workflow: paste or import a job description, save it to a local workspace, generate an ATS-friendly tailored resume, and create an interview prep packet grounded in your resume and saved career notes.
 
-## Key Features
+## What It Does
 
-- Parse job descriptions into structured fields (title, responsibilities, required skills, seniority).
-- Analyze skill gaps against a user profile and compute a fit score.
-- Suggest focused projects that help close identified gaps, with difficulty and learning outcomes.
-- Context-aware follow-up chat allowing users to ask specific questions about the role or recommendations.
-- Server-side API integration so API keys remain secure (no secrets in the browser).
-
-## How It Works (High Level)
-
-1. User pastes or uploads a job description.
-2. Server runs a small pipeline of structured tool calls that:
-   - Parse the job description into a typed schema.
-   - Compare parsed requirements to a candidate profile to compute fit.
-   - Produce a small set of project suggestions targeted to bridge gaps.
-3. Results are returned to the frontend as typed objects and displayed in a three-panel layout (parsed role, gap analysis, suggested projects).
-4. The user can follow up via the chat interface which uses the same server-side context to answer questions.
+- Saves job descriptions with inferred title and company.
+- Generates tailored LaTeX resume drafts from a saved base resume profile.
+- Keeps resume output ATS-friendly with simple sections and bullet lists.
+- Runs deterministic resume QA for issues like fake metrics, AI-sounding phrases, dash punctuation, weak bullet structure, and unsupported claims.
+- Creates interview prep packets for saved jobs, including likely questions, talking points, gap briefs, and story prompts.
+- Stores local workspace data in `data/local-workspace.json` when running on your machine.
+- Exposes a read-only local MCP server for MCP-capable clients.
+- Includes deterministic evals for resume quality, ATS output, JD metadata, and interview prep exports.
 
 ## Tech Stack
 
-- Next.js (App Router)
+- Next.js App Router
+- React
 - TypeScript
-- Tailwind CSS
-- Anthropic SDK (server-side for chat/tooling)
-- File-backed local persistence for saved job data and corpus search
+- Anthropic SDK
+- Vitest
+- File-backed local persistence
+- Read-only stdio MCP server
 
 ## Quickstart
 
 Prerequisites:
-- Node.js 18+ and npm
-- ANTHROPIC_API_KEY (set in `.env.local`)
 
-Install and run locally:
+- Node.js 18+
+- npm
+- Anthropic API key
 
 ```bash
-git clone https://github.com/ss889/ai-career-cockpit.git
-cd ai-career-cockpit
+git clone https://github.com/ss889/cockpit.git
+cd cockpit
 npm install
 cp .env.local.example .env.local
-# Edit .env.local and add your ANTHROPIC_API_KEY
+```
+
+Add your Anthropic key to `.env.local`:
+
+```bash
+ANTHROPIC_API_KEY=your_key_here
+ANTHROPIC_MODEL=claude-haiku-4-5
+```
+
+Run locally:
+
+```bash
 npm run dev
 ```
 
-Open http://localhost:3000 in your browser.
+Open `http://localhost:3000`.
 
-Optional: build and run via Docker
+## Main Workflow
+
+1. Open the app and sign into the local workspace.
+2. Paste a job description.
+3. Save the JD.
+4. Set your base LaTeX resume in the Tailor Resume panel.
+5. Generate a tailored `.tex` resume for a saved job.
+6. Generate interview prep for the same job.
+7. Download the resume or prep packet when ready.
+
+Job links can be imported when the source allows server-side fetching. Some boards, including large job aggregators, may block automated fetches, so copy-pasting the JD is the most reliable path.
+
+## Scripts
 
 ```bash
-docker build -t ai-career-cockpit:latest .
-docker run --rm --name ai-career-cockpit -p 3000:3000 \
-  -e "ANTHROPIC_API_KEY=..." -v $(pwd)/data:/app/data ai-career-cockpit:latest
+npm run dev              # Start the local dev server
+npm run build            # Build for production
+npm start                # Start the production server
+npm test -- --run        # Run the test suite once
+npm run evals            # Run deterministic quality evals
+npm run mcp:self-test    # Validate the local MCP server
+npm run mcp:jobops       # Start the read-only MCP server over stdio
 ```
 
-Notes:
-- Mounting `./data` keeps your local state between Docker runs.
-- Use `/api/corpus` to add job descriptions and `POST /api/jobs/analyze` to run analysis via the API.
+## Evals
+
+The eval suite lives in `tests/evals` and checks:
+
+- Clean tailored resume profiles pass deterministic QA.
+- Rendered LaTeX remains ATS-friendly.
+- JD title and company inference works on fixture descriptions.
+- Interview prep exports as clean markdown.
+
+Run it with:
+
+```bash
+npm run evals
+```
+
+## Local MCP
+
+The MCP server is read-only and exposes saved workspace data from `data/local-workspace.json`.
+
+Available tools:
+
+- `jobops_workspace_summary`
+- `jobops_list_saved_jobs`
+- `jobops_get_saved_job`
+- `jobops_get_base_resume_profile`
+- `jobops_export_job_packet`
+
+More details are in `DOCS/EVALS_AND_MCP.md`.
 
 ## Project Structure
 
-```
-.
-├── app/                       # Next.js app router pages and API routes
-├── components/                # UI components (JD input, analysis panels, chat)
-├── lib/                       # Tool definitions, API helpers, and analysis logic
-├── types/                     # Shared TypeScript interfaces
-├── tests/                     # Unit and integration tests
-```
-
-## Tests
-
-Run the test suite with:
-
-```bash
-npm test
+```text
+app/                  Next.js pages and API routes
+components/           Reusable UI components
+lib/                  Resume rendering, QA, metadata parsing, local workspace helpers
+scripts/              Worker and MCP scripts
+tests/                Unit tests and evals
+types/                Shared TypeScript types
+DOCS/                 Supporting documentation
 ```
 
-Tests cover tool schema validation, parsing logic, and result handling.
+## Deployment Notes
 
-## Deployment
-
-Deploy to Vercel or another Node-capable host. Ensure environment variables (at minimum `ANTHROPIC_API_KEY`) are configured in the target environment.
-
-## Development Commands
-
-- `npm run dev` — Start development server
-- `npm run build` — Build for production
-- `npm start` — Start production server
-- `npm run lint` — Run ESLint
-
-## Troubleshooting & Notes
-
-- If you see Anthropic model 404s, set `ANTHROPIC_MODEL` in your environment to a supported model id and restart the server.
-- The project uses server-side tool calling patterns; check `lib/tools.ts` and `lib/analyze.ts` for the analysis pipeline implementation.
+The app can deploy to Vercel or any Node-capable host, but the richest workflow is local because workspace data is file-backed. For hosted deployment, configure `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` in the platform environment.
 
 ## License
 
