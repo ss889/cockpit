@@ -1,4 +1,5 @@
 import type { ResumeProfile } from "./profile";
+import type { AuditReport } from "./audit";
 
 export type WorkspaceRole = "owner" | "editor" | "viewer";
 
@@ -51,6 +52,9 @@ export type JobDescriptionEntry = {
   interviewPrep?: InterviewPrepPacket;
   prepStatus?: "idle" | "generating" | "ready" | "error";
   prepError?: string;
+  auditReport?: AuditReport;
+  auditStatus?: "idle" | "auditing" | "ready" | "error";
+  auditError?: string;
 };
 
 export type LocalWorkspace = {

@@ -9,6 +9,7 @@ import { inferJobMetadata } from '@/lib/jobMetadata';
 import { renderResumeLatex } from '@/lib/renderLatex';
 import { Plus, Moon, Sun, User, ClipboardList, X, FileText, Brain, LogOut, Link as LinkIcon, MessageSquareText } from 'lucide-react';
 import Link from 'next/link';
+import AuditCard from '@/components/AuditCard';
 import QuickCopyPanel from '@/components/QuickCopyPanel';
 
 // Convert URLs and markdown links in message text to clickable HTML
@@ -89,6 +90,7 @@ export default function CockpitChat() {
   const [editingJobId, setEditingJobId] = useState<string | null>(null);
   const [editingJobForm, setEditingJobForm] = useState({ title: '', company: '', url: '', text: '' });
   const [jobLibraryStatus, setJobLibraryStatus] = useState('');
+  const [auditCoolingDown, setAuditCoolingDown] = useState(false);
   const [attachedFile, setAttachedFile] = useState<{ name: string; content: string } | null>(null);
   const [tailorOpen, setTailorOpen] = useState(false);
   const [baseResumeLatex, setBaseResumeLatex] = useState('');
@@ -444,6 +446,9 @@ export default function CockpitChat() {
               interviewPrep: textChanged ? undefined : item.interviewPrep,
               prepStatus: textChanged ? 'idle' : item.prepStatus,
               prepError: textChanged ? undefined : item.prepError,
+              auditReport: textChanged ? undefined : item.auditReport,
+              auditStatus: textChanged ? 'idle' : item.auditStatus,
+              auditError: textChanged ? undefined : item.auditError,
             }
           : item
       )
@@ -656,6 +661,61 @@ export default function CockpitChat() {
     );
   };
 
+  const auditSavedJob = async (job: JobDescriptionEntry) => {
+    if (!canEditWorkspace) return;
+    const profile = currentDraftProfile || baseResumeProfile;
+    if (!profile) {
+      setJobLibraryStatus('Set or attach a base resume before running an ATS audit.');
+      return;
+    }
+
+    if (auditCoolingDown) {
+      setJobLibraryStatus('Audit is cooling down for a few seconds.');
+      return;
+    }
+
+    setAuditCoolingDown(true);
+    window.setTimeout(() => setAuditCoolingDown(false), 5000);
+    updateJobDescriptions((jobs) =>
+      jobs.map((item) =>
+        item.id === job.id ? { ...item, auditStatus: 'auditing', auditError: undefined } : item
+      )
+    );
+    setJobLibraryStatus(`Running ATS audit for ${job.title}...`);
+
+    try {
+      const response = await fetch('/api/audit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ job, profile }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Failed to run ATS audit');
+
+      updateJobDescriptions((jobs) =>
+        jobs.map((item) =>
+          item.id === job.id
+            ? {
+                ...item,
+                auditReport: data.report,
+                auditStatus: 'ready',
+                auditError: undefined,
+              }
+            : item
+        )
+      );
+      setJobLibraryStatus(`ATS audit ready for ${job.title}.`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to run ATS audit';
+      updateJobDescriptions((jobs) =>
+        jobs.map((item) =>
+          item.id === job.id ? { ...item, auditStatus: 'error', auditError: message } : item
+        )
+      );
+      setJobLibraryStatus(message);
+    }
+  };
+
   const renderSavedJobCard = (job: JobDescriptionEntry, compact = false) => (
     <article key={job.id} className={`workspace-card ${compact ? 'workspace-card-compact' : ''}`}>
       {editingJobId === job.id ? (
@@ -726,6 +786,7 @@ export default function CockpitChat() {
           <p>{job.text.slice(0, compact ? 220 : 360)}{job.text.length > (compact ? 220 : 360) ? '...' : ''}</p>
           {job.error && <p className="workspace-error">{job.error}</p>}
           {job.prepError && <p className="workspace-error">{job.prepError}</p>}
+          {job.auditError && <p className="workspace-error">{job.auditError}</p>}
           <div className="workspace-card-actions">
             <button onClick={() => tailorSavedJob(job)} disabled={!canEditWorkspace || job.status === 'tailoring' || (!baseResumeProfile && !currentDraftProfile)}>
               {job.status === 'tailoring' ? 'Tailoring...' : 'Tailor'}
@@ -743,7 +804,11 @@ export default function CockpitChat() {
             <button onClick={() => downloadInterviewPrep(job)} disabled={!job.interviewPrep}>
               Download Prep
             </button>
+            <button onClick={() => auditSavedJob(job)} disabled={!canEditWorkspace || job.auditStatus === 'auditing' || auditCoolingDown || (!baseResumeProfile && !currentDraftProfile)}>
+              {job.auditStatus === 'auditing' ? 'Auditing...' : 'Audit'}
+            </button>
           </div>
+          {job.auditReport && <AuditCard report={job.auditReport} compact={compact} />}
           {job.interviewPrep && !compact && (
             <div className="interview-prep-preview">
               <div className="interview-prep-header">
