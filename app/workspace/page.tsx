@@ -14,6 +14,7 @@ import QuickCopyPanel from '@/components/QuickCopyPanel';
 
 const SESSION_COOKIE = 'jobops_workspace_session=active; path=/; max-age=2592000; SameSite=Lax';
 const CLEAR_SESSION_COOKIE = 'jobops_workspace_session=; path=/; max-age=0; SameSite=Lax';
+const THEME_STORAGE_KEY = 'jobops_theme';
 type StudioSection = 'jobs' | 'resume' | 'interview' | 'memory';
 
 // Convert URLs and markdown links in message text to clickable HTML
@@ -68,7 +69,10 @@ export default function CockpitChat() {
   const [isLoading, setIsLoading] = useState(false);
   const [jd, setJd] = useState('');
   const [workspaceHydrated, setWorkspaceHydrated] = useState(false);
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light';
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+  });
   const [quickCopyOpen, setQuickCopyOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
   const [activeStudioSection, setActiveStudioSection] = useState<StudioSection>('jobs');
@@ -197,6 +201,7 @@ export default function CockpitChat() {
   const toggleTheme = () => {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
+    window.localStorage.setItem(THEME_STORAGE_KEY, newTheme);
     if (newTheme === 'dark') {
       document.documentElement.classList.add('theme-dark');
     } else {
@@ -223,6 +228,14 @@ export default function CockpitChat() {
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('theme-dark');
+    } else {
+      document.documentElement.classList.remove('theme-dark');
+    }
+  }, [theme]);
 
   useEffect(() => {
     let active = true;

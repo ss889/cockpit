@@ -2,16 +2,22 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Moon, Sun } from 'lucide-react';
 import type { WorkspaceRole, WorkspaceSession } from '@/types/workspace';
 
 const SESSION_STORAGE_KEY = 'jobops_workspace_session';
 const SESSION_COOKIE = 'jobops_workspace_session=active; path=/; max-age=2592000; SameSite=Lax';
+const THEME_STORAGE_KEY = 'jobops_theme';
 
 export default function LandingPage() {
   const router = useRouter();
   const [signInOpen, setSignInOpen] = useState(false);
   const [workspaceName, setWorkspaceName] = useState('');
   const [role, setRole] = useState<WorkspaceRole>('owner');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light';
+    return window.localStorage.getItem(THEME_STORAGE_KEY) === 'dark' ? 'dark' : 'light';
+  });
 
   useEffect(() => {
     try {
@@ -23,6 +29,19 @@ export default function LandingPage() {
       // Middleware handles cookie-backed sessions. LocalStorage is best-effort.
     }
   }, [router]);
+
+  useEffect(() => {
+    if (theme === 'dark') {
+      document.documentElement.classList.add('theme-dark');
+    } else {
+      document.documentElement.classList.remove('theme-dark');
+    }
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
+  const toggleTheme = () => {
+    setTheme((currentTheme) => (currentTheme === 'light' ? 'dark' : 'light'));
+  };
 
   const signIn = () => {
     if (!workspaceName.trim()) return;
@@ -38,6 +57,18 @@ export default function LandingPage() {
 
   return (
     <main className="landing-page">
+      <div className="landing-actions">
+        <button
+          onClick={toggleTheme}
+          className="theme-toggle"
+          title="Toggle Theme"
+          aria-label={theme === 'light' ? 'Switch to dark theme' : 'Switch to light theme'}
+          type="button"
+        >
+          {theme === 'light' ? <Moon size={20} /> : <Sun size={20} />}
+        </button>
+      </div>
+
       <section className="landing-hero" aria-label="JobOps AI landing page">
         <div className="landing-copy">
           <h1>One place to go from job description to application-ready.</h1>

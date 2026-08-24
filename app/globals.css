@@ -56,6 +56,13 @@ body {
   color: var(--text-primary);
 }
 
+.landing-actions {
+  position: fixed;
+  top: 1.5rem;
+  right: 1.5rem;
+  z-index: 20;
+}
+
 .landing-hero {
   min-height: 100vh;
   display: flex;
