@@ -14,6 +14,7 @@ import QuickCopyPanel from '@/components/QuickCopyPanel';
 
 const SESSION_COOKIE = 'jobops_workspace_session=active; path=/; max-age=2592000; SameSite=Lax';
 const CLEAR_SESSION_COOKIE = 'jobops_workspace_session=; path=/; max-age=0; SameSite=Lax';
+type StudioSection = 'jobs' | 'resume' | 'interview' | 'memory';
 
 // Convert URLs and markdown links in message text to clickable HTML
 function renderMessageContent(text: string): string {
@@ -70,6 +71,7 @@ export default function CockpitChat() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [quickCopyOpen, setQuickCopyOpen] = useState(false);
   const [workspaceOpen, setWorkspaceOpen] = useState(false);
+  const [activeStudioSection, setActiveStudioSection] = useState<StudioSection>('jobs');
   const [session, setSession] = useState<WorkspaceSession | null>(() =>
     loadStoredValue<WorkspaceSession | null>('jobops_workspace_session', null)
   );
@@ -1271,118 +1273,276 @@ export default function CockpitChat() {
               </div>
             </section>
 
-            <section className="studio-status-strip" aria-label="Workspace status">
-              <div>
-                <span>Saved JDs</span>
-                <strong>{jobDescriptions.length}</strong>
-              </div>
-              <div>
-                <span>Resume Drafts</span>
-                <strong>{jobDescriptions.filter((job) => job.tailoredLatex).length}</strong>
-              </div>
-              <div>
-                <span>Interview Kits</span>
-                <strong>{jobDescriptions.filter((job) => job.interviewPrep).length}</strong>
-              </div>
-              <div>
-                <span>Memory Notes</span>
-                <strong>{memories.length}</strong>
-              </div>
-            </section>
+            <nav className="studio-tabs" aria-label="Workspace sections">
+              {[
+                { id: 'jobs' as const, label: 'Jobs', count: jobDescriptions.length },
+                { id: 'resume' as const, label: 'Resume', count: jobDescriptions.filter((job) => job.tailoredLatex).length },
+                { id: 'interview' as const, label: 'Interview', count: jobDescriptions.filter((job) => job.interviewPrep).length },
+                { id: 'memory' as const, label: 'Memory', count: memories.length },
+              ].map((section) => (
+                <button
+                  key={section.id}
+                  className={activeStudioSection === section.id ? 'active' : ''}
+                  onClick={() => setActiveStudioSection(section.id)}
+                  type="button"
+                >
+                  <span>{section.label}</span>
+                  <strong>{section.count}</strong>
+                </button>
+              ))}
+            </nav>
 
-            <section className="studio-board">
-              <div className="studio-panel studio-panel-compose">
-                <div className="studio-panel-header">
-                  <div>
-                    <span>Compose</span>
-                    <h3>Paste Job Description</h3>
-                  </div>
-                  <span>Ready</span>
-                </div>
-                <div className="workspace-form">
-                  <textarea
-                    value={jobForm.text}
-                    onChange={(event) => updateJobDescriptionText(event.target.value)}
-                    placeholder="Paste the job description here. Title and company will be inferred when possible."
-                    rows={10}
-                    disabled={!canEditWorkspace}
-                  />
-                  <div className="home-form-row">
-                    <input
-                      value={jobForm.url}
-                      onChange={(event) => setJobForm((form) => ({ ...form, url: event.target.value }))}
-                      placeholder="Job link (optional)"
-                      disabled={!canEditWorkspace}
-                    />
-                    <button onClick={importJobFromUrl} disabled={!canEditWorkspace || !jobForm.url.trim()}>
-                      <LinkIcon size={15} />
-                      Import Link
-                    </button>
-                  </div>
-                  <div className="home-form-row">
-                    <input
-                      value={jobForm.title}
-                      onChange={(event) => setJobForm((form) => ({ ...form, title: event.target.value }))}
-                      placeholder="Job title (auto)"
-                      disabled={!canEditWorkspace}
-                    />
-                    <input
-                      value={jobForm.company}
-                      onChange={(event) => setJobForm((form) => ({ ...form, company: event.target.value }))}
-                      placeholder="Company (auto)"
-                      disabled={!canEditWorkspace}
-                    />
-                  </div>
-                  <div className="studio-command-row">
-                    <button onClick={saveJobDescriptionFromForm} disabled={!canEditWorkspace || !jobForm.text.trim()}>
-                      Save JD
-                    </button>
-                    <button onClick={tailorAllSavedJobs} disabled={!canEditWorkspace || jobDescriptions.length === 0 || (!baseResumeProfile && !currentDraftProfile)}>
-                      Tailor All Saved
-                    </button>
-                  </div>
-                </div>
-                {jobLibraryStatus && <p className="workspace-status">{jobLibraryStatus}</p>}
-              </div>
-
-              <aside className="studio-side">
-                <div className="studio-panel">
-                  <div className="studio-panel-header">
-                    <div>
-                      <span>Library</span>
-                      <h3>Saved Jobs</h3>
+            <section className="studio-section-view">
+              {activeStudioSection === 'jobs' && (
+                <div className="studio-section-grid">
+                  <div className="studio-panel studio-panel-compose">
+                    <div className="studio-panel-header">
+                      <div>
+                        <span>Compose</span>
+                        <h3>Paste Job Description</h3>
+                      </div>
+                      <span>Ready</span>
                     </div>
-                    <span>{jobDescriptions.length}</span>
+                    <div className="workspace-form">
+                      <textarea
+                        value={jobForm.text}
+                        onChange={(event) => updateJobDescriptionText(event.target.value)}
+                        placeholder="Paste the job description here. Title and company will be inferred when possible."
+                        rows={11}
+                        disabled={!canEditWorkspace}
+                      />
+                      <div className="home-form-row">
+                        <input
+                          value={jobForm.url}
+                          onChange={(event) => setJobForm((form) => ({ ...form, url: event.target.value }))}
+                          placeholder="Job link (optional)"
+                          disabled={!canEditWorkspace}
+                        />
+                        <button onClick={importJobFromUrl} disabled={!canEditWorkspace || !jobForm.url.trim()}>
+                          <LinkIcon size={15} />
+                          Import Link
+                        </button>
+                      </div>
+                      <div className="home-form-row">
+                        <input
+                          value={jobForm.title}
+                          onChange={(event) => setJobForm((form) => ({ ...form, title: event.target.value }))}
+                          placeholder="Job title (auto)"
+                          disabled={!canEditWorkspace}
+                        />
+                        <input
+                          value={jobForm.company}
+                          onChange={(event) => setJobForm((form) => ({ ...form, company: event.target.value }))}
+                          placeholder="Company (auto)"
+                          disabled={!canEditWorkspace}
+                        />
+                      </div>
+                      <div className="studio-command-row">
+                        <button onClick={saveJobDescriptionFromForm} disabled={!canEditWorkspace || !jobForm.text.trim()}>
+                          Save JD
+                        </button>
+                        <button onClick={tailorAllSavedJobs} disabled={!canEditWorkspace || jobDescriptions.length === 0 || (!baseResumeProfile && !currentDraftProfile)}>
+                          Tailor All Saved
+                        </button>
+                      </div>
+                    </div>
+                    {jobLibraryStatus && <p className="workspace-status">{jobLibraryStatus}</p>}
                   </div>
-                  <div className="workspace-list">
-                    {jobDescriptions.length === 0 ? (
-                      <p className="workspace-empty">Paste a job description on the left to get started.</p>
-                    ) : (
-                      jobDescriptions.slice(0, 3).map((job) => renderSavedJobCard(job, true))
-                    )}
-                  </div>
-                </div>
 
-                <div className="studio-panel studio-panel-quiet">
-                  <div className="studio-panel-header">
-                    <div>
-                      <span>Assistant</span>
-                      <h3>Assistant</h3>
+                  <div className="studio-panel">
+                    <div className="studio-panel-header">
+                      <div>
+                        <span>Library</span>
+                        <h3>Saved Jobs</h3>
+                      </div>
+                      <span>{jobDescriptions.length}</span>
+                    </div>
+                    <div className="workspace-list">
+                      {jobDescriptions.length === 0 ? (
+                        <p className="workspace-empty">Paste a job description on the left to get started.</p>
+                      ) : (
+                        jobDescriptions.slice(0, 4).map((job) => renderSavedJobCard(job, true))
+                      )}
                     </div>
                   </div>
-                  <div className="studio-link-list">
-                    <button onClick={() => setInput('Help me prepare for interviews from my saved jobs.')}>
-                      Interview prep from saved jobs
-                    </button>
-                    <button onClick={() => setInput('What skills should I focus on for AI engineering roles?')}>
-                      Skill focus for AI roles
-                    </button>
-                    <button onClick={() => setWorkspaceOpen(true)}>
-                      Open full workspace
-                    </button>
+                </div>
+              )}
+
+              {activeStudioSection === 'resume' && (
+                <div className="studio-section-grid">
+                  <div className="studio-panel">
+                    <div className="studio-panel-header">
+                      <div>
+                        <span>Base Profile</span>
+                        <h3>Resume Source</h3>
+                      </div>
+                      <span>{baseResumeProfile || currentDraftProfile ? 'Ready' : 'Needed'}</span>
+                    </div>
+                    <p className="studio-panel-copy">
+                      Set your base LaTeX resume once, then tailor every saved job from the same profile.
+                    </p>
+                    <div className="studio-command-row">
+                      <button onClick={() => setTailorOpen(true)}>
+                        <FileText size={15} />
+                        Set Base Resume
+                      </button>
+                      <button onClick={tailorAllSavedJobs} disabled={!canEditWorkspace || jobDescriptions.length === 0 || (!baseResumeProfile && !currentDraftProfile)}>
+                        Tailor All Saved
+                      </button>
+                      <button onClick={downloadTailoredLatex} disabled={!tailoredLatex}>
+                        Download Current .tex
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="studio-panel">
+                    <div className="studio-panel-header">
+                      <div>
+                        <span>Drafts</span>
+                        <h3>Tailored Resumes</h3>
+                      </div>
+                      <span>{jobDescriptions.filter((job) => job.tailoredLatex).length}</span>
+                    </div>
+                    <div className="workspace-list">
+                      {jobDescriptions.filter((job) => job.tailoredLatex).length === 0 ? (
+                        <p className="workspace-empty">Tailor a saved job to create the first .tex draft.</p>
+                      ) : (
+                        jobDescriptions.filter((job) => job.tailoredLatex).map((job) => renderSavedJobCard(job, true))
+                      )}
+                    </div>
                   </div>
                 </div>
-              </aside>
+              )}
+
+              {activeStudioSection === 'interview' && (
+                <div className="studio-section-grid">
+                  <div className="studio-panel">
+                    <div className="studio-panel-header">
+                      <div>
+                        <span>Prep</span>
+                        <h3>Interview Kits</h3>
+                      </div>
+                      <span>{jobDescriptions.filter((job) => job.interviewPrep).length}</span>
+                    </div>
+                    <p className="studio-panel-copy">
+                      Generate a prep packet from a saved job and your resume profile, then download it as markdown.
+                    </p>
+                    <div className="studio-link-list">
+                      <button onClick={() => setInput('Help me prepare for interviews from my saved jobs.')}>
+                        Interview prep from saved jobs
+                      </button>
+                      <button onClick={() => setInput('What skills should I focus on for AI engineering roles?')}>
+                        Skill focus for AI roles
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="studio-panel">
+                    <div className="studio-panel-header">
+                      <div>
+                        <span>Saved Jobs</span>
+                        <h3>Prep Queue</h3>
+                      </div>
+                      <span>{jobDescriptions.length}</span>
+                    </div>
+                    <div className="workspace-list">
+                      {jobDescriptions.length === 0 ? (
+                        <p className="workspace-empty">Save a job description first, then generate prep from it.</p>
+                      ) : (
+                        jobDescriptions.map((job) => renderSavedJobCard(job, true))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeStudioSection === 'memory' && (
+                <div className="studio-section-grid">
+                  <div className="studio-panel">
+                    <div className="studio-panel-header">
+                      <div>
+                        <span>Memory Palace</span>
+                        <h3>Add Memory</h3>
+                      </div>
+                      <span>{memories.length}</span>
+                    </div>
+                    <div className="workspace-form memory-grid">
+                      <input
+                        value={memoryForm.wing}
+                        onChange={(event) => setMemoryForm((form) => ({ ...form, wing: event.target.value }))}
+                        placeholder="Wing"
+                        disabled={!canEditWorkspace}
+                      />
+                      <input
+                        value={memoryForm.room}
+                        onChange={(event) => setMemoryForm((form) => ({ ...form, room: event.target.value }))}
+                        placeholder="Room"
+                        disabled={!canEditWorkspace}
+                      />
+                      <input
+                        value={memoryForm.drawer}
+                        onChange={(event) => setMemoryForm((form) => ({ ...form, drawer: event.target.value }))}
+                        placeholder="Drawer"
+                        disabled={!canEditWorkspace}
+                      />
+                    </div>
+                    <div className="workspace-form">
+                      <input
+                        value={memoryForm.title}
+                        onChange={(event) => setMemoryForm((form) => ({ ...form, title: event.target.value }))}
+                        placeholder="Memory title"
+                        disabled={!canEditWorkspace}
+                      />
+                      <textarea
+                        value={memoryForm.text}
+                        onChange={(event) => setMemoryForm((form) => ({ ...form, text: event.target.value }))}
+                        placeholder="Save a project detail, recruiter note, preference, or reusable career context."
+                        rows={6}
+                        disabled={!canEditWorkspace}
+                      />
+                      <button onClick={addMemory} disabled={!canEditWorkspace || !memoryForm.title.trim() || !memoryForm.text.trim()}>
+                        Add Memory
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="studio-panel">
+                    <div className="studio-panel-header">
+                      <div>
+                        <span>Recall</span>
+                        <h3>Saved Memories</h3>
+                      </div>
+                      <span>{filteredMemories.length}</span>
+                    </div>
+                    <input
+                      className="workspace-search"
+                      value={memorySearch}
+                      onChange={(event) => setMemorySearch(event.target.value)}
+                      placeholder="Search memory..."
+                    />
+                    <div className="workspace-list">
+                      {filteredMemories.length === 0 ? (
+                        <p className="workspace-empty">No memories saved yet.</p>
+                      ) : (
+                        filteredMemories.slice(0, 6).map((memory) => (
+                          <article key={memory.id} className="workspace-card">
+                            <div className="workspace-card-header">
+                              <strong>{memory.title}</strong>
+                              {canEditWorkspace && (
+                                <button onClick={() => deleteMemory(memory.id)} title="Delete memory">
+                                  <X size={14} />
+                                </button>
+                              )}
+                            </div>
+                            <span>{memory.wing} / {memory.room} / {memory.drawer}</span>
+                            <p>{memory.text}</p>
+                          </article>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
             </section>
           </div>
         ) : (

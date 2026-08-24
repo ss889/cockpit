@@ -445,6 +445,59 @@ body {
   font-size: 1.25rem;
 }
 
+.studio-tabs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.studio-tabs button {
+  min-height: 68px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  cursor: pointer;
+}
+
+.studio-tabs button:hover,
+.studio-tabs button.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.studio-tabs span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.studio-tabs strong {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.studio-section-view {
+  min-height: 390px;
+}
+
+.studio-section-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 0.75fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.studio-panel-copy {
+  margin-bottom: 0.9rem;
+}
+
 .workspace-home-stat {
   padding: 0.85rem;
   border: 1px solid var(--border);
@@ -835,6 +888,7 @@ body {
   .workspace-home-main,
   .studio-hero,
   .studio-board,
+  .studio-section-grid,
   .workspace-home-grid,
   .example-prompts.compact,
   .home-workspace-board,
@@ -856,6 +910,20 @@ body {
 
   .studio-status-strip div:nth-child(-n + 2) {
     border-bottom: 1px solid var(--border);
+  }
+
+  .studio-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.6rem;
+  }
+
+  .studio-tabs button {
+    min-height: 58px;
+    padding: 0.75rem;
+  }
+
+  .studio-tabs strong {
+    font-size: 1rem;
   }
 }
 
