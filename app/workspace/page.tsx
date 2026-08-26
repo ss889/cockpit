@@ -817,7 +817,10 @@ export default function CockpitChat() {
       ) : (
         <>
           <div className="workspace-card-header">
-            <strong>{job.title}</strong>
+            <div className="workspace-card-title">
+              <strong>{job.title}</strong>
+              {job.tailoredLatex && <span className="workspace-card-badge">Tailored Resume Ready</span>}
+            </div>
             {canEditWorkspace && (
               <div className="workspace-card-tools">
                 <button onClick={() => startEditingJobDescription(job)} title="Edit job description">
