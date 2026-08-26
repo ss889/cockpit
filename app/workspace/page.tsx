@@ -7,7 +7,7 @@ import type { JobDescriptionEntry, LocalWorkspace, MemoryEntry, WorkspaceRole, W
 import { renderInterviewPrepMarkdown } from '@/lib/interviewPrep';
 import { inferJobMetadata } from '@/lib/jobMetadata';
 import { renderResumeLatex } from '@/lib/renderLatex';
-import { Plus, Moon, Sun, User, ClipboardList, X, FileText, Brain, LogOut, Link as LinkIcon, MessageSquareText } from 'lucide-react';
+import { Plus, Moon, Sun, User, ClipboardList, X, FileText, Brain, LogOut, Link as LinkIcon, MessageSquareText, Copy } from 'lucide-react';
 import Link from 'next/link';
 import AuditCard from '@/components/AuditCard';
 import QuickCopyPanel from '@/components/QuickCopyPanel';
@@ -107,6 +107,7 @@ export default function CockpitChat() {
   const [tailorStatus, setTailorStatus] = useState<'idle' | 'ingesting' | 'tailoring' | 'ready' | 'error'>('idle');
   const [tailorMessage, setTailorMessage] = useState('');
   const [tailoredLatex, setTailoredLatex] = useState('');
+  const [selectedTailoredJobId, setSelectedTailoredJobId] = useState<string | null>(null);
   const [tailorKeywords, setTailorKeywords] = useState<string[]>([]);
   const [qaReport, setQaReport] = useState<{ before: QAIssue[]; after: QAIssue[]; autoFixed: boolean } | null>(null);
   const [currentDraftProfile, setCurrentDraftProfile] = useState<ResumeProfile | null>(null);
@@ -504,9 +505,37 @@ export default function CockpitChat() {
     URL.revokeObjectURL(url);
   };
 
+  const copyTextToClipboard = async (text: string, successMessage: string) => {
+    if (!text) return;
+    try {
+      await navigator.clipboard.writeText(text);
+      setJobLibraryStatus(successMessage);
+    } catch {
+      setJobLibraryStatus('Could not copy. Select the text and copy it manually.');
+    }
+  };
+
   const safeFilename = (value: string, fallback: string) => {
     const slug = value.replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '').toLowerCase();
     return slug || fallback;
+  };
+
+  const downloadJobLatex = (job: JobDescriptionEntry) => {
+    if (!job.tailoredLatex) return;
+    downloadTextFile(`${safeFilename(`${job.company}-${job.title}`, 'tailored')}-resume.tex`, job.tailoredLatex);
+  };
+
+  const copyJobLatex = (job: JobDescriptionEntry) => {
+    if (!job.tailoredLatex) return;
+    copyTextToClipboard(job.tailoredLatex, `Copied tailored .tex for ${job.title}.`);
+  };
+
+  const previewJobLatex = (job: JobDescriptionEntry) => {
+    if (!job.tailoredLatex) return;
+    setSelectedTailoredJobId(job.id);
+    setTailorOpen(true);
+    setTailorStatus('ready');
+    setTailorMessage(`Showing saved tailored .tex for ${job.title}.`);
   };
 
   const selectRelevantMemories = (query: string): MemoryEntry[] => {
@@ -584,6 +613,7 @@ export default function CockpitChat() {
     try {
       const data = await generateTailoredResume(profile, job.text);
       const latestLatex = renderResumeLatex(data.profile);
+      setSelectedTailoredJobId(job.id);
       updateJobDescriptions((jobs) =>
         jobs.map((item) =>
           item.id === job.id
@@ -813,10 +843,14 @@ export default function CockpitChat() {
             <button onClick={() => tailorSavedJob(job)} disabled={!canEditWorkspace || job.status === 'tailoring' || (!baseResumeProfile && !currentDraftProfile)}>
               {job.status === 'tailoring' ? 'Tailoring...' : 'Tailor'}
             </button>
-            <button
-              onClick={() => job.tailoredLatex && downloadTextFile(`${safeFilename(job.title, 'tailored')}-resume.tex`, job.tailoredLatex)}
-              disabled={!job.tailoredLatex}
-            >
+            <button onClick={() => previewJobLatex(job)} disabled={!job.tailoredLatex}>
+              View .tex
+            </button>
+            <button onClick={() => copyJobLatex(job)} disabled={!job.tailoredLatex}>
+              <Copy size={15} />
+              Copy .tex
+            </button>
+            <button onClick={() => downloadJobLatex(job)} disabled={!job.tailoredLatex}>
               Download .tex
             </button>
             <button onClick={() => generateInterviewPrep(job)} disabled={!canEditWorkspace || job.prepStatus === 'generating' || (!baseResumeProfile && !currentDraftProfile)}>
@@ -1024,6 +1058,11 @@ export default function CockpitChat() {
     downloadTextFile('tailored-resume.tex', latestLatex);
   };
 
+  const copyTailoredLatex = () => {
+    const latestLatex = currentDraftProfile ? renderResumeLatex(currentDraftProfile) : tailoredLatex;
+    copyTextToClipboard(latestLatex, 'Copied current tailored .tex.');
+  };
+
   const handleRefineResume = async () => {
     if (!refineInput.trim() || !currentDraftProfile) return;
 
@@ -1077,7 +1116,25 @@ export default function CockpitChat() {
     }
   };
 
+  const tailoredJobs = jobDescriptions.filter((job) => job.tailoredLatex);
+  const selectedTailoredJob = tailoredJobs.find((job) => job.id === selectedTailoredJobId) ?? null;
   const latestTailoredLatex = currentDraftProfile ? renderResumeLatex(currentDraftProfile) : tailoredLatex;
+  const previewLatex = selectedTailoredJob?.tailoredLatex || latestTailoredLatex;
+  const previewLatexTitle = selectedTailoredJob ? `${selectedTailoredJob.title} LaTeX` : 'Tailored LaTeX';
+  const downloadPreviewLatex = () => {
+    if (selectedTailoredJob) {
+      downloadJobLatex(selectedTailoredJob);
+      return;
+    }
+    downloadTailoredLatex();
+  };
+  const copyPreviewLatex = () => {
+    if (selectedTailoredJob) {
+      copyJobLatex(selectedTailoredJob);
+      return;
+    }
+    copyTailoredLatex();
+  };
 
   return (
     <div className="cockpit-chat">
@@ -1136,6 +1193,10 @@ export default function CockpitChat() {
               <button onClick={handleIngestResume} disabled={tailorStatus === 'ingesting' || !baseResumeLatex.trim()}>
                 {tailorStatus === 'ingesting' ? 'Saving...' : 'Set as Base Profile'}
               </button>
+              <button onClick={copyTailoredLatex} disabled={!tailoredLatex}>
+                <Copy size={15} />
+                Copy .tex
+              </button>
               <button onClick={downloadTailoredLatex} disabled={!tailoredLatex}>
                 Download .tex
               </button>
@@ -1147,16 +1208,56 @@ export default function CockpitChat() {
               </div>
             )}
 
-            {latestTailoredLatex && (
+            {tailoredJobs.length > 0 && (
+              <div className="tailored-drafts-panel">
+                <div className="latex-preview-header">
+                  <h3>Saved Tailored Drafts</h3>
+                  <span>{tailoredJobs.length}</span>
+                </div>
+                <div className="tailored-drafts-list">
+                  {tailoredJobs.map((job) => (
+                    <article
+                      key={job.id}
+                      className={`tailored-draft-card ${selectedTailoredJob?.id === job.id ? 'active' : ''}`}
+                    >
+                      <div>
+                        <strong>{job.title}</strong>
+                        <span>{job.company}{job.tailoredAt ? ` - ${new Date(job.tailoredAt).toLocaleDateString()}` : ''}</span>
+                      </div>
+                      <div className="tailored-draft-actions">
+                        <button onClick={() => previewJobLatex(job)} type="button">
+                          View
+                        </button>
+                        <button onClick={() => copyJobLatex(job)} type="button">
+                          <Copy size={14} />
+                          Copy
+                        </button>
+                        <button onClick={() => downloadJobLatex(job)} type="button">
+                          Download
+                        </button>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {previewLatex && (
               <div className="latex-preview-panel">
                 <div className="latex-preview-header">
-                  <h3>Tailored LaTeX</h3>
-                  <button onClick={downloadTailoredLatex} type="button">
-                    Download .tex
-                  </button>
+                  <h3>{previewLatexTitle}</h3>
+                  <div className="latex-preview-actions">
+                    <button onClick={copyPreviewLatex} type="button">
+                      <Copy size={14} />
+                      Copy .tex
+                    </button>
+                    <button onClick={downloadPreviewLatex} type="button">
+                      Download .tex
+                    </button>
+                  </div>
                 </div>
                 <pre className="latex-preview" aria-label="Generated tailored resume LaTeX">
-                  <code>{latestTailoredLatex}</code>
+                  <code>{previewLatex}</code>
                 </pre>
               </div>
             )}

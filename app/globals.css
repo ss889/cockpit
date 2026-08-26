@@ -932,6 +932,21 @@ body {
   .studio-tabs strong {
     font-size: 1rem;
   }
+
+  .tailored-draft-card,
+  .latex-preview-header {
+    grid-template-columns: 1fr;
+    align-items: flex-start;
+  }
+
+  .latex-preview-header {
+    flex-direction: column;
+  }
+
+  .latex-preview-actions,
+  .tailored-draft-actions {
+    justify-content: flex-start;
+  }
 }
 
 /* Clickable links in chat messages */
@@ -1066,7 +1081,20 @@ body {
   font-size: 0.9rem;
 }
 
-.latex-preview-header button {
+.latex-preview-actions,
+.tailored-draft-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.latex-preview-header button,
+.tailored-draft-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.3rem;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.45rem 0.65rem;
@@ -1078,9 +1106,54 @@ body {
   cursor: pointer;
 }
 
-.latex-preview-header button:hover {
+.latex-preview-header button:hover,
+.tailored-draft-actions button:hover {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+.tailored-drafts-panel {
+  margin-top: 1rem;
+  border-top: 1px solid var(--border);
+  padding-top: 1rem;
+}
+
+.tailored-drafts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.tailored-draft-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg);
+}
+
+.tailored-draft-card.active {
+  border-color: var(--accent);
+}
+
+.tailored-draft-card strong,
+.tailored-draft-card span {
+  display: block;
+}
+
+.tailored-draft-card strong {
+  font-size: 0.82rem;
+  margin-bottom: 0.25rem;
+}
+
+.tailored-draft-card span,
+.latex-preview-header span {
+  color: var(--text-secondary);
+  font-size: 0.72rem;
+  text-transform: uppercase;
 }
 
 .latex-preview {
