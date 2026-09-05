@@ -4,6 +4,7 @@ import { extractKeywordsFallback } from "@/lib/ollama";
 import { escapeLatex, renderResumeLatex } from "@/lib/renderLatex";
 import { applyResumeEdits, sanitizeBullet } from "@/lib/resumeEdit";
 import { runQA } from "@/lib/resumeQA";
+import { validateSkills } from "@/app/api/tailor/route";
 import type { ResumeProfile } from "@/types/profile";
 import type { InterviewPrepPacket } from "@/types/workspace";
 
@@ -169,5 +170,47 @@ describe("resume tailoring helpers", () => {
     expect(markdown).toContain("## Technical Questions");
     expect(markdown).toContain("- How would you evaluate an LLM workflow?");
     expect(markdown).toContain("### Story 1: Debugging story");
+  });
+
+  it("rejects tailored skills that are absent from the base profile", () => {
+    const proposed: ResumeProfile["skills"] = [
+      {
+        category: "Languages",
+        items: ["TypeScript", "Python", "UiPath"],
+      },
+    ];
+
+    expect(validateSkills(proposed, sampleProfile.skills)).toEqual([
+      {
+        category: "Languages",
+        items: ["TypeScript", "Python"],
+      },
+    ]);
+  });
+
+  it("accepts valid skill rephrases when grounded in the base profile", () => {
+    const proposed: ResumeProfile["skills"] = [
+      {
+        category: "Languages",
+        items: ["TypeScript development", "Python"],
+      },
+    ];
+
+    expect(validateSkills(proposed, sampleProfile.skills)).toEqual(proposed);
+  });
+
+  it("falls back to base skills when proposed skills are all unsupported", () => {
+    const proposed: ResumeProfile["skills"] = [
+      {
+        category: "Languages",
+        items: ["UiPath", "Tesseract OCR"],
+      },
+      {
+        category: "Document Automation",
+        items: ["RPA", "Document classification"],
+      },
+    ];
+
+    expect(validateSkills(proposed, sampleProfile.skills)).toEqual(sampleProfile.skills);
   });
 });

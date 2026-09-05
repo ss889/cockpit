@@ -6,7 +6,7 @@ import { renderResumeLatex } from "@/lib/renderLatex";
 import { sanitizeBullet } from "@/lib/resumeEdit";
 import { collectBullets, runQA } from "@/lib/resumeQA";
 import { reviseResumeBulletsTool, tailorResumeTool } from "@/lib/tools";
-import type { QAIssue, ResumeProfile } from "@/types/profile";
+import type { MatchAssessment, QAIssue, ResumeProfile } from "@/types/profile";
 
 interface TailorToolOutput {
   selected_project_ids: string[];
@@ -35,7 +35,10 @@ export async function POST(request: NextRequest) {
     }
 
     const keywords = await extractKeywords(jd);
-    const tailored = await tailorProfile(baseProfile, jd, keywords);
+    const [tailored, match] = await Promise.all([
+      tailorProfile(baseProfile, jd, keywords),
+      assessMatch(baseProfile, keywords),
+    ]);
     const before = runQA(tailored, keywords);
 
     let finalProfile = tailored;
@@ -46,10 +49,12 @@ export async function POST(request: NextRequest) {
       const fixable = after.filter((issue) => issue.location.includes(":"));
       if (fixable.length === 0) break;
 
-      const revised = await reviseFlaggedBullets(finalProfile, fixable);
+      const revised = await reviseFlaggedBullets(finalProfile, fixable, baseProfile);
       if (revised) {
+        const revisedIssues = runQA(revised, keywords);
+        if (revisedIssues.length > after.length) break;
         finalProfile = revised;
-        after = runQA(finalProfile, keywords);
+        after = revisedIssues;
         autoFixed = after.length < before.length;
       } else {
         break;
@@ -60,6 +65,7 @@ export async function POST(request: NextRequest) {
       profile: finalProfile,
       latex: renderResumeLatex(finalProfile),
       keywords,
+      match,
       qa: {
         before,
         after,
@@ -109,7 +115,56 @@ async function tailorProfile(baseProfile: ResumeProfile, jd: string, keywords: s
   return applyTailoring(baseProfile, output);
 }
 
-async function reviseFlaggedBullets(profile: ResumeProfile, issues: QAIssue[]): Promise<ResumeProfile | null> {
+async function assessMatch(baseProfile: ResumeProfile, keywords: string[]): Promise<MatchAssessment> {
+  const fallback: MatchAssessment = {
+    score: 50,
+    strong: [],
+    gaps: [],
+    recommendation: "Match assessment unavailable.",
+  };
+
+  try {
+    const client = createAnthropicClient();
+    const model = process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
+
+    const response = await client.messages.create({
+      model,
+      max_tokens: 512,
+      system: `You are a resume match evaluator. Compare the extracted JD keywords against the base profile. Return only valid JSON with no markdown and no preamble.
+
+Schema:
+{
+  "score": number,
+  "strong": string[],
+  "gaps": string[],
+  "recommendation": string
+}
+
+Rules:
+- Score must be an integer from 0 to 100
+- strong includes only keywords clearly present in the profile
+- gaps includes required keywords clearly absent from the profile
+- recommendation is one honest sentence: strong match, apply with caveats, or weak match`,
+      messages: [
+        {
+          role: "user",
+          content: JSON.stringify({ keywords, profile: baseProfile }, null, 2),
+        },
+      ],
+    });
+
+    const text = extractTextContent(response.content);
+    return normalizeMatchAssessment(JSON.parse(text));
+  } catch {
+    return fallback;
+  }
+}
+
+async function reviseFlaggedBullets(
+  profile: ResumeProfile,
+  issues: QAIssue[],
+  baseProfile: ResumeProfile
+): Promise<ResumeProfile | null> {
   const flagged = collectBullets(profile).filter((bullet) =>
     issues.some((issue) => issue.location === bullet.location)
   );
@@ -122,8 +177,14 @@ async function reviseFlaggedBullets(profile: ResumeProfile, issues: QAIssue[]): 
   const response = await client.messages.create({
     model,
     max_tokens: 2048,
-    system:
-      "Fix only these specific issues in the bullets below. Do not change anything else. Never invent facts, tools, metrics, or experience. Write like a careful human resume editor: plain verbs, concrete nouns, natural rhythm, no padded claims. Remove all dash punctuation, avoid formulaic AI phrases, vary opening verbs, keep each bullet one sentence, and keep bullets under 32 words when possible. For experience bullets, use the Google XYZ shape when truthful: achieved X, measured or scoped by Y, by doing Z.",
+    system: `Fix only the specific QA issues listed. Do not change any bullet that is not flagged. Never introduce a fact, tool, metric, number, or timeframe that is not present in the base profile below.
+
+When fixing a weak or vague bullet, strengthen it only using facts, tools, and scope signals that are already in the base profile. If no supporting fact exists, leave the bullet as-is rather than inventing one.
+
+Style rules: plain verbs, concrete nouns, no dash punctuation, no AI phrases, one sentence per bullet, under 32 words when possible. For experience bullets, use XYZ shape only when truthful and supported by the base profile.
+
+Base profile source of truth:
+${JSON.stringify(baseProfile, null, 2)}`,
     tools: [reviseResumeBulletsTool],
     tool_choice: { type: "tool", name: "revise_resume_bullets" },
     messages: [
@@ -150,7 +211,9 @@ function applyTailoring(baseProfile: ResumeProfile, output: TailorToolOutput): R
   return {
     header: baseProfile.header,
     education: baseProfile.education,
-    skills: output.updated_skills?.length ? output.updated_skills : baseProfile.skills,
+    skills: output.updated_skills?.length
+      ? validateSkills(output.updated_skills, baseProfile.skills)
+      : baseProfile.skills,
     projects: baseProfile.projects
       .filter((project) => selectedIds.has(project.id))
       .map((project) => ({
@@ -162,6 +225,40 @@ function applyTailoring(baseProfile: ResumeProfile, output: TailorToolOutput): R
       bullets: sanitizeBullets(experienceRewrites.get(experience.id) ?? experience.bullets),
     })),
   };
+}
+
+export function validateSkills(
+  proposed: ResumeProfile["skills"],
+  base: ResumeProfile["skills"]
+): ResumeProfile["skills"] {
+  const baseCategories = new Set(base.map((category) => category.category.toLowerCase()));
+  const baseItems = new Set<string>();
+
+  for (const category of base) {
+    for (const item of category.items) {
+      baseItems.add(item.toLowerCase());
+    }
+  }
+
+  const validated = proposed
+    .filter((category) => baseCategories.has(category.category.toLowerCase()))
+    .map((category) => ({
+      ...category,
+      items: category.items.filter((item) => skillMatches(item, baseItems)),
+    }))
+    .filter((category) => category.items.length > 0);
+
+  return validated.length > 0 ? validated : base;
+}
+
+function skillMatches(proposed: string, baseItems: Set<string>): boolean {
+  const normalized = proposed.toLowerCase();
+  for (const baseItem of baseItems) {
+    if (normalized === baseItem || normalized.includes(baseItem) || baseItem.includes(normalized)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 function applyRevisions(profile: ResumeProfile, revisions: { location: string; bullet: string }[]): ResumeProfile {
@@ -215,6 +312,37 @@ ${jd}
 
 Extracted keywords to weave in naturally where truthful:
 ${keywords.join(", ")}`;
+}
+
+function extractTextContent(content: unknown): string {
+  if (!Array.isArray(content)) return "";
+  return content
+    .map((block) => {
+      if (!block || typeof block !== "object") return "";
+      const typed = block as { type?: unknown; text?: unknown };
+      return typed.type === "text" && typeof typed.text === "string" ? typed.text : "";
+    })
+    .join("")
+    .trim();
+}
+
+function normalizeMatchAssessment(value: unknown): MatchAssessment {
+  if (!value || typeof value !== "object") {
+    throw new Error("Invalid match assessment");
+  }
+
+  const assessment = value as Partial<MatchAssessment>;
+  const score = Number(assessment.score);
+
+  return {
+    score: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 50,
+    strong: Array.isArray(assessment.strong) ? assessment.strong.map(String).filter(Boolean) : [],
+    gaps: Array.isArray(assessment.gaps) ? assessment.gaps.map(String).filter(Boolean) : [],
+    recommendation:
+      typeof assessment.recommendation === "string" && assessment.recommendation.trim()
+        ? assessment.recommendation.trim()
+        : "Match assessment unavailable.",
+  };
 }
 
 function getToolInput<T>(content: unknown, toolName: string): T | null {

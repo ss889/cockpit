@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
-import type { QAIssue, ResumeProfile } from '@/types/profile';
+import type { MatchAssessment, QAIssue, ResumeProfile } from '@/types/profile';
 import type { JobDescriptionEntry, LocalWorkspace, MemoryEntry, WorkspaceRole, WorkspaceSession } from '@/types/workspace';
 import { renderInterviewPrepMarkdown } from '@/lib/interviewPrep';
 import { inferJobMetadata } from '@/lib/jobMetadata';
@@ -109,6 +109,8 @@ export default function CockpitChat() {
   const [tailoredLatex, setTailoredLatex] = useState('');
   const [selectedTailoredJobId, setSelectedTailoredJobId] = useState<string | null>(null);
   const [tailorKeywords, setTailorKeywords] = useState<string[]>([]);
+  const [matchAssessment, setMatchAssessment] = useState<MatchAssessment | null>(null);
+  const [matchAssessmentJobId, setMatchAssessmentJobId] = useState<string | null>(null);
   const [qaReport, setQaReport] = useState<{ before: QAIssue[]; after: QAIssue[]; autoFixed: boolean } | null>(null);
   const [currentDraftProfile, setCurrentDraftProfile] = useState<ResumeProfile | null>(null);
   const [refineMessages, setRefineMessages] = useState<Message[]>([]);
@@ -533,6 +535,10 @@ export default function CockpitChat() {
   const previewJobLatex = (job: JobDescriptionEntry) => {
     if (!job.tailoredLatex) return;
     setSelectedTailoredJobId(job.id);
+    if (matchAssessmentJobId !== job.id) {
+      setMatchAssessment(null);
+      setMatchAssessmentJobId(null);
+    }
     setTailorOpen(true);
     setTailorStatus('ready');
     setTailorMessage(`Showing saved tailored .tex for ${job.title}.`);
@@ -569,6 +575,9 @@ export default function CockpitChat() {
   };
 
   const generateTailoredResume = async (profile: ResumeProfile, jdText: string) => {
+    setSelectedTailoredJobId(null);
+    setMatchAssessment(null);
+    setMatchAssessmentJobId(null);
     const response = await fetch('/api/tailor', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -579,6 +588,7 @@ export default function CockpitChat() {
 
     setTailoredLatex(data.latex);
     setTailorKeywords(data.keywords || []);
+    setMatchAssessment(data.match || null);
     setQaReport(data.qa);
     setCurrentDraftProfile(data.profile);
     setRefineMessages([]);
@@ -614,6 +624,7 @@ export default function CockpitChat() {
       const data = await generateTailoredResume(profile, job.text);
       const latestLatex = renderResumeLatex(data.profile);
       setSelectedTailoredJobId(job.id);
+      setMatchAssessmentJobId(job.id);
       updateJobDescriptions((jobs) =>
         jobs.map((item) =>
           item.id === job.id
@@ -1124,6 +1135,13 @@ export default function CockpitChat() {
   const latestTailoredLatex = currentDraftProfile ? renderResumeLatex(currentDraftProfile) : tailoredLatex;
   const previewLatex = selectedTailoredJob?.tailoredLatex || latestTailoredLatex;
   const previewLatexTitle = selectedTailoredJob ? `${selectedTailoredJob.title} LaTeX` : 'Tailored LaTeX';
+  const matchTone = matchAssessment
+    ? matchAssessment.score >= 80
+      ? 'strong'
+      : matchAssessment.score >= 60
+        ? 'medium'
+        : 'weak'
+    : 'medium';
   const downloadPreviewLatex = () => {
     if (selectedTailoredJob) {
       downloadJobLatex(selectedTailoredJob);
@@ -1208,6 +1226,27 @@ export default function CockpitChat() {
             {tailorMessage && (
               <div className={`tailor-status ${tailorStatus === 'error' ? 'error' : ''}`}>
                 {tailorMessage}
+              </div>
+            )}
+
+            {matchAssessment && (
+              <div className="match-assessment">
+                <div className="match-assessment-header">
+                  <span className={`match-score ${matchTone}`}>{matchAssessment.score}% match</span>
+                  <p>{matchAssessment.recommendation}</p>
+                </div>
+                {matchAssessment.gaps.length > 0 ? (
+                  <div className="match-gap-list">
+                    <strong>Missing from your profile</strong>
+                    <ul>
+                      {matchAssessment.gaps.slice(0, 8).map((gap) => (
+                        <li key={gap}>{gap}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : (
+                  <p className="match-gap-empty">No clear gaps detected from the extracted keywords.</p>
+                )}
               </div>
             )}
 

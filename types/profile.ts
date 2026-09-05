@@ -39,10 +39,18 @@ export interface QAIssue {
   detail: string;
 }
 
+export interface MatchAssessment {
+  score: number;
+  strong: string[];
+  gaps: string[];
+  recommendation: string;
+}
+
 export interface TailorResponse {
   profile: ResumeProfile;
   latex: string;
   keywords: string[];
+  match: MatchAssessment;
   qa: {
     before: QAIssue[];
     after: QAIssue[];
