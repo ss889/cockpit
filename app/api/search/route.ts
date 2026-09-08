@@ -1,8 +1,6 @@
 import '@/lib/patchAnthropicModel';
 import { createAnthropicClient } from '@/lib/anthropicClient';
 
-const anthropic = createAnthropicClient();
-
 interface JobResult {
   title: string;
   company: string;
@@ -29,9 +27,10 @@ export async function POST(req: Request) {
       );
     }
 
-      const model = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5';
+    const anthropic = createAnthropicClient();
+    const model = process.env.ANTHROPIC_MODEL || 'claude-haiku-4-5';
 
-      const response = await anthropic.messages.create({
+    const response = await anthropic.messages.create({
         model,
       max_tokens: 2000,
       tools: [

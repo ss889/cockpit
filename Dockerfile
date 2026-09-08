@@ -24,6 +24,8 @@ COPY . .
 
 ENV NEXT_TELEMETRY_DISABLED=1
 ENV NODE_ENV=production
+ENV ANTHROPIC_API_KEY=sk-ant-placeholder
+ENV OPENAI_API_KEY=sk-placeholder
 RUN npm run build
 
 # ── Stage 3: Background worker (separate Railway service if needed) ───────────
