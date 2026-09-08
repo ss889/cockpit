@@ -1,0 +1,47 @@
+
+> ai-career-cockpit@0.1.0 dev
+> next dev --port 3001
+
+▲ Next.js 16.2.6 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.1.7:3001
+- Environments: .env.local, .env
+✓ Ready in 382ms
+Creating turbopack project { dir: 'C:\\Users\\saber\\blg\\ai-career-cockpit', testMode: true }
+
+ GET / 200 in 2.1s (next.js: 2.0s, application-code: 118ms)
+ GET / 200 in 136ms (next.js: 56ms, application-code: 79ms)
+✓ Finished writing to filesystem cache in 253.7min
+✓ Finished writing to filesystem cache in 26.5min
+✓ Finished writing to filesystem cache in 643.7min
+ GET / 200 in 218ms (next.js: 97ms, application-code: 121ms)
+ GET / 200 in 139ms (next.js: 61ms, application-code: 79ms)
+✓ Finished writing to filesystem cache in 14.9min
+✓ Finished writing to filesystem cache in 22.7min
+✓ Finished writing to filesystem cache in 20.6min
+ GET / 200 in 191ms (next.js: 82ms, application-code: 110ms)
+✓ Finished writing to filesystem cache in 102.1min
+ GET / 200 in 43ms (next.js: 7ms, application-code: 35ms)
+○ Compiling /api/workspace ...
+ GET /api/workspace 200 in 3.9s (next.js: 3.9s, application-code: 10ms)
+ PUT /api/workspace 200 in 6ms (next.js: 1898µs, application-code: 4ms)
+○ Compiling /profile ...
+ GET /profile 200 in 6.9s (next.js: 6.9s, application-code: 35ms)
+ GET /profile 200 in 19ms (next.js: 2ms, application-code: 17ms)
+ GET /api/profile 200 in 2.6s (next.js: 2.6s, application-code: 3ms)
+ GET /api/profile 200 in 3ms (next.js: 1130µs, application-code: 2ms)
+ GET /api/profile 200 in 5ms (next.js: 1697µs, application-code: 3ms)
+ GET / 200 in 12ms (next.js: 1784µs, application-code: 10ms)
+ GET /api/workspace 200 in 7ms (next.js: 1715µs, application-code: 6ms)
+ GET /api/workspace 200 in 5ms (next.js: 1587µs, application-code: 4ms)
+ GET /api/profile 200 in 4ms (next.js: 1425µs, application-code: 3ms)
+✓ Finished writing to filesystem cache in 6.1min
+✓ Finished writing to filesystem cache in 19.3min
+ GET / 200 in 302ms (next.js: 98ms, application-code: 204ms)
+ GET / 200 in 28ms (next.js: 3ms, application-code: 26ms)
+ GET /api/workspace 200 in 46ms (next.js: 36ms, application-code: 10ms)
+ GET /api/profile 200 in 25ms (next.js: 21ms, application-code: 4ms)
+✓ Finished writing to filesystem cache in 3.0min
+ PUT /api/workspace 200 in 7ms (next.js: 2ms, application-code: 4ms)
+ POST /api/job-link 502 in 2.7s (next.js: 2.7s, application-code: 59ms)
+ POST /api/job-link 502 in 36ms (next.js: 1356µs, application-code: 34ms)

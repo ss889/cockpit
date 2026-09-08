@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createAnthropicClient } from "@/lib/anthropicClient";
 import { getBaseProfile } from "@/lib/database";
+import { extractJSON } from "@/lib/extractJSON";
 import { extractKeywords } from "@/lib/ollama";
 import { renderResumeLatex } from "@/lib/renderLatex";
 import { sanitizeBullet } from "@/lib/resumeEdit";
@@ -130,31 +131,47 @@ async function assessMatch(baseProfile: ResumeProfile, keywords: string[]): Prom
     const response = await client.messages.create({
       model,
       max_tokens: 512,
-      system: `You are a resume match evaluator. Compare the extracted JD keywords against the base profile. Return only valid JSON with no markdown and no preamble.
+      temperature: 0,
+      system: `You are a resume match evaluator. Compare the extracted JD keywords against the candidate's base profile.
+
+Return ONLY a valid JSON object. Start your response with { and end with }. No markdown, no code fences, no explanation before or after.
 
 Schema:
 {
-  "score": number,
-  "strong": string[],
-  "gaps": string[],
-  "recommendation": string
+  "score": number between 0 and 100,
+  "strong": array of strings (keywords clearly present in profile),
+  "gaps": array of strings (required keywords clearly absent),
+  "recommendation": string (one sentence: strong match, apply with caveats, or weak match)
 }
 
-Rules:
-- Score must be an integer from 0 to 100
-- strong includes only keywords clearly present in the profile
-- gaps includes required keywords clearly absent from the profile
-- recommendation is one honest sentence: strong match, apply with caveats, or weak match`,
+If you cannot assess, return:
+{"score":50,"strong":[],"gaps":[],"recommendation":"Match assessment unavailable."}`,
       messages: [
         {
           role: "user",
-          content: JSON.stringify({ keywords, profile: baseProfile }, null, 2),
+          content: JSON.stringify(
+            {
+              keywords,
+              profile: {
+                skills: baseProfile.skills,
+                projectTitles: baseProfile.projects.map((project) => project.title),
+                experienceTitles: baseProfile.experience.map((experience) => experience.title),
+              },
+            },
+            null,
+            2
+          ),
         },
       ],
     });
 
     const text = extractTextContent(response.content);
-    return normalizeMatchAssessment(JSON.parse(text));
+    try {
+      return normalizeMatchAssessment(extractJSON(text));
+    } catch (error) {
+      console.warn("assessMatch parse failed:", text, error);
+      return fallback;
+    }
   } catch {
     return fallback;
   }
