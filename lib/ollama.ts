@@ -35,7 +35,7 @@ export async function extractKeywordsOllama(jd: string): Promise<string[] | null
       body: JSON.stringify({
         model: OLLAMA_MODEL,
         prompt:
-          "Extract the 15 most important technical skills, tools, and role-specific terms from this job description. Return ONLY a JSON array of strings, nothing else, no markdown.\n\n" +
+          "Extract the 15 most important technical skills, tools, and role-specific terms from this job description. Return ONLY a JSON array of strings, nothing else, no markdown. Return only specific, meaningful keywords a recruiter would screen for. Each keyword must be a named tool, platform, library, language, specific technical skill or methodology, or domain-specific term with clear meaning. Do not return generic words such as accuracy, core, layout, nice, or extraction; adjectives or qualifiers without a noun; words under 4 characters; or boilerplate phrases from job description formatting.\n\n" +
           jd,
         stream: false,
       }),
@@ -77,6 +77,64 @@ export function extractKeywordsFallback(jd: string): string[] {
 export async function extractKeywords(jd: string): Promise<string[]> {
   const ollamaResult = await extractKeywordsOllama(jd);
   return ollamaResult ?? extractKeywordsFallback(jd);
+}
+
+const GENERIC_BLOCKLIST = new Set([
+  "nice",
+  "core",
+  "layout",
+  "accuracy",
+  "extraction",
+  "output",
+  "input",
+  "data",
+  "system",
+  "process",
+  "tool",
+  "tools",
+  "skills",
+  "experience",
+  "ability",
+  "strong",
+  "clear",
+  "real",
+  "good",
+  "best",
+  "high",
+  "low",
+  "fast",
+  "key",
+  "new",
+  "use",
+  "used",
+  "using",
+  "work",
+  "working",
+  "build",
+  "building",
+  "built",
+  "run",
+  "running",
+  "make",
+  "making",
+]);
+
+export function filterKeywords(keywords: string[]): string[] {
+  return keywords.filter((keyword) => {
+    const trimmed = keyword.trim();
+    const lower = trimmed.toLowerCase();
+
+    if (!trimmed || GENERIC_BLOCKLIST.has(lower) || lower.length < 4) return false;
+
+    const words = lower.split(/\s+/);
+    if (words.length > 1) return true;
+
+    const technicalSuffixes = ["api", "sql", "db", "ml", "ai", "js", "ts", "py"];
+    const hasTechnicalSuffix = technicalSuffixes.some((suffix) => lower.endsWith(suffix));
+    const hasMeaningfulCapitalization = /[A-Z]/.test(trimmed);
+
+    return hasTechnicalSuffix || hasMeaningfulCapitalization || lower.length >= 8;
+  });
 }
 
 function normalizeKeywords(values: unknown[]): string[] {

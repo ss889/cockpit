@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createAnthropicClient } from "@/lib/anthropicClient";
 import { getBaseProfile } from "@/lib/database";
 import { extractJSON } from "@/lib/extractJSON";
-import { extractKeywords } from "@/lib/ollama";
+import { extractKeywords, filterKeywords } from "@/lib/ollama";
 import { renderResumeLatex } from "@/lib/renderLatex";
 import { sanitizeBullet } from "@/lib/resumeEdit";
 import { collectBullets, runQA } from "@/lib/resumeQA";
@@ -35,7 +35,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const keywords = await extractKeywords(jd);
+    const rawKeywords = await extractKeywords(jd);
+    const keywords = filterKeywords(rawKeywords);
     const [tailored, match] = await Promise.all([
       tailorProfile(baseProfile, jd, keywords),
       assessMatch(baseProfile, keywords),
@@ -120,7 +121,8 @@ async function assessMatch(baseProfile: ResumeProfile, keywords: string[]): Prom
   const fallback: MatchAssessment = {
     score: 50,
     strong: [],
-    gaps: [],
+    required_gaps: [],
+    optional_gaps: [],
     recommendation: "Match assessment unavailable.",
   };
 
@@ -140,12 +142,13 @@ Schema:
 {
   "score": number between 0 and 100,
   "strong": array of strings (keywords clearly present in profile),
-  "gaps": array of strings (required keywords clearly absent),
+  "required_gaps": array of strings (required keywords clearly absent),
+  "optional_gaps": array of strings (nice-to-have keywords clearly absent),
   "recommendation": string (one sentence: strong match, apply with caveats, or weak match)
 }
 
 If you cannot assess, return:
-{"score":50,"strong":[],"gaps":[],"recommendation":"Match assessment unavailable."}`,
+{"score":50,"strong":[],"required_gaps":[],"optional_gaps":[],"recommendation":"Match assessment unavailable."}`,
       messages: [
         {
           role: "user",
@@ -354,7 +357,12 @@ function normalizeMatchAssessment(value: unknown): MatchAssessment {
   return {
     score: Number.isFinite(score) ? Math.max(0, Math.min(100, Math.round(score))) : 50,
     strong: Array.isArray(assessment.strong) ? assessment.strong.map(String).filter(Boolean) : [],
-    gaps: Array.isArray(assessment.gaps) ? assessment.gaps.map(String).filter(Boolean) : [],
+    required_gaps: Array.isArray(assessment.required_gaps)
+      ? assessment.required_gaps.map(String).filter(Boolean)
+      : [],
+    optional_gaps: Array.isArray(assessment.optional_gaps)
+      ? assessment.optional_gaps.map(String).filter(Boolean)
+      : [],
     recommendation:
       typeof assessment.recommendation === "string" && assessment.recommendation.trim()
         ? assessment.recommendation.trim()

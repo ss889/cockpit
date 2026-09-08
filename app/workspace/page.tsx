@@ -1235,11 +1235,11 @@ export default function CockpitChat() {
                   <span className={`match-score ${matchTone}`}>{matchAssessment.score}% match</span>
                   <p>{matchAssessment.recommendation}</p>
                 </div>
-                {matchAssessment.gaps.length > 0 ? (
+                {matchAssessment.required_gaps.length > 0 ? (
                   <div className="match-gap-list">
                     <strong>Missing from your profile</strong>
                     <ul>
-                      {matchAssessment.gaps.slice(0, 8).map((gap) => (
+                      {matchAssessment.required_gaps.slice(0, 8).map((gap) => (
                         <li key={gap}>{gap}</li>
                       ))}
                     </ul>

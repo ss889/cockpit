@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { renderInterviewPrepMarkdown } from "@/lib/interviewPrep";
-import { extractKeywordsFallback } from "@/lib/ollama";
+import { extractKeywordsFallback, filterKeywords } from "@/lib/ollama";
 import { escapeLatex, renderResumeLatex } from "@/lib/renderLatex";
 import { applyResumeEdits, sanitizeBullet } from "@/lib/resumeEdit";
 import { runQA } from "@/lib/resumeQA";
@@ -105,6 +105,14 @@ describe("resume tailoring helpers", () => {
 
     expect(keywords.join(" ").toLowerCase()).toContain("typescript");
     expect(keywords.length).toBeLessThanOrEqual(15);
+  });
+
+  it("filters generic keyword fragments", () => {
+    expect(filterKeywords(["nice", "Docker", "core"])).toEqual(["Docker"]);
+    expect(filterKeywords(["AI", "RAG", "Python"])).toEqual(["Python"]);
+    expect(filterKeywords(["document classification", "nice"])).toEqual(["document classification"]);
+    expect(filterKeywords(["FastAPI", "SQLite", "Docker"])).toEqual(["FastAPI", "SQLite", "Docker"]);
+    expect(filterKeywords(["nice", "core", "good"])).toEqual([]);
   });
 
   it("escapes LaTeX special characters", () => {

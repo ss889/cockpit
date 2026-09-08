@@ -42,7 +42,8 @@ export interface QAIssue {
 export interface MatchAssessment {
   score: number;
   strong: string[];
-  gaps: string[];
+  required_gaps: string[];
+  optional_gaps: string[];
   recommendation: string;
 }
 
