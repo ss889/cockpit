@@ -27,14 +27,24 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Job description is required" }, { status: 400 });
     }
 
-    const baseProfile = isResumeProfile(profile) ? profile : getBaseProfile();
-    if (!baseProfile) {
+    const result = await tailorResumeProfile(jd, isResumeProfile(profile) ? profile : getBaseProfile());
+    if (!result) {
       return NextResponse.json(
         { error: "Set a base resume profile before tailoring. Paste your .tex resume in the Tailor Resume panel first." },
         { status: 409 }
       );
     }
 
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error("Tailor error:", error);
+    const message = error instanceof Error ? error.message : "Failed to tailor resume";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
+}
+
+export async function tailorResumeProfile(jd: string, baseProfile: ResumeProfile | null) {
+  if (!baseProfile) return null;
     const rawKeywords = await extractKeywords(jd);
     const keywords = filterKeywords(rawKeywords);
     const [tailored, match] = await Promise.all([
@@ -63,7 +73,7 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    return NextResponse.json({
+    return {
       profile: finalProfile,
       latex: renderResumeLatex(finalProfile),
       keywords,
@@ -73,12 +83,7 @@ export async function POST(request: NextRequest) {
         after,
         autoFixed,
       },
-    });
-  } catch (error) {
-    console.error("Tailor error:", error);
-    const message = error instanceof Error ? error.message : "Failed to tailor resume";
-    return NextResponse.json({ error: message }, { status: 500 });
-  }
+    };
 }
 
 function isResumeProfile(value: unknown): value is ResumeProfile {

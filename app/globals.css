@@ -454,7 +454,7 @@ body {
 
 .studio-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
@@ -499,6 +499,27 @@ body {
   grid-template-columns: minmax(0, 1fr) minmax(340px, 0.75fr);
   gap: 1.25rem;
   align-items: start;
+}
+
+.deadline-dashboard {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.deadline-card {
+  margin-bottom: 0.7rem;
+}
+
+.deadline-card p {
+  margin: 0.3rem 0 0;
+  font-size: 0.8rem;
+}
+
+.deadline-card a {
+  display: inline-block;
+  margin-top: 0.45rem;
 }
 
 .studio-panel-copy {
@@ -922,6 +943,10 @@ body {
   .studio-tabs {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.6rem;
+  }
+
+  .deadline-dashboard {
+    grid-template-columns: 1fr;
   }
 
   .studio-tabs button {

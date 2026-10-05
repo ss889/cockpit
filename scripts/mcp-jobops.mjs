@@ -187,6 +187,9 @@ function emptyWorkspace() {
     memories: [],
     jobDescriptions: [],
     baseResumeProfile: null,
+    sourceCaptures: [],
+    gmail: { connected: false, label: "JobOps", lastSyncAt: null, syncedMessageIds: [] },
+    gmailCandidates: [],
     updatedAt: null,
   };
 }
@@ -197,6 +200,9 @@ function normalizeWorkspace(value) {
     memories: Array.isArray(value?.memories) ? value.memories : [],
     jobDescriptions: Array.isArray(value?.jobDescriptions) ? value.jobDescriptions : [],
     baseResumeProfile: value?.baseResumeProfile || null,
+    sourceCaptures: Array.isArray(value?.sourceCaptures) ? value.sourceCaptures : [],
+    gmail: value?.gmail || { connected: false, label: "JobOps", lastSyncAt: null, syncedMessageIds: [] },
+    gmailCandidates: Array.isArray(value?.gmailCandidates) ? value.gmailCandidates : [],
     updatedAt: value?.updatedAt || null,
   };
 }

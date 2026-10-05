@@ -11,6 +11,14 @@ export function emptyWorkspace(): LocalWorkspace {
     memories: [],
     jobDescriptions: [],
     baseResumeProfile: null,
+    sourceCaptures: [],
+    gmail: {
+      connected: false,
+      label: "JobOps",
+      lastSyncAt: null,
+      syncedMessageIds: [],
+    },
+    gmailCandidates: [],
     updatedAt: null,
   };
 }
@@ -49,6 +57,19 @@ function normalizeWorkspace(value: Partial<LocalWorkspace>): LocalWorkspace {
     memories: Array.isArray(value.memories) ? value.memories : [],
     jobDescriptions: Array.isArray(value.jobDescriptions) ? value.jobDescriptions : [],
     baseResumeProfile: value.baseResumeProfile ?? null,
+    sourceCaptures: Array.isArray(value.sourceCaptures) ? value.sourceCaptures : [],
+    gmail: value.gmail
+      ? {
+          connected: Boolean(value.gmail.connected),
+          label: value.gmail.label || "JobOps",
+          lastSyncAt: value.gmail.lastSyncAt ?? null,
+          ...(value.gmail.lastError ? { lastError: value.gmail.lastError } : {}),
+          syncedMessageIds: Array.isArray(value.gmail.syncedMessageIds) ? value.gmail.syncedMessageIds : [],
+        }
+      : emptyWorkspace().gmail,
+    gmailCandidates: Array.isArray(value.gmailCandidates) ? value.gmailCandidates : [],
     updatedAt: value.updatedAt ?? null,
   };
 }
+
+export { normalizeWorkspace as normalizeLocalWorkspace };

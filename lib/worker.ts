@@ -4,6 +4,14 @@ import { getEmbedding, embeddingsAvailable } from './embeddings';
 import * as sqliteHelper from './sqlite';
 import { runAnalyze } from './analyze';
 import { saveJobResult } from './jobs';
+import { readLocalWorkspace, writeLocalWorkspace } from './localWorkspace';
+import { processWorkspaceJob } from './jobProcessing';
+
+type WorkerJob = {
+  id: string;
+  type: string;
+  payload?: Record<string, unknown>;
+};
 
 function sleep(ms: number) {
   return new Promise((res) => setTimeout(res, ms));
@@ -37,13 +45,13 @@ async function doBackfillJob() {
   console.log('Backfill complete');
 }
 
-async function processJob(job: any) {
+async function processJob(job: WorkerJob) {
   try {
     if (job.type === 'backfill') {
       await doBackfillJob();
     } else if (job.type === 'analyze') {
       console.log('Processing analyze job', job.id);
-      const jd = job.payload?.jd;
+      const jd = typeof job.payload?.jd === 'string' ? job.payload.jd : '';
       if (!jd) throw new Error('Missing job description');
       const result = await runAnalyze(jd);
       console.log('Analyze result for', job.id, { summary: result.text });
@@ -51,6 +59,16 @@ async function processJob(job: any) {
         saveJobResult(job.id, result);
       } catch (e) {
         console.warn('Failed to save job result', job.id, e);
+      }
+    } else if (job.type === 'process_job') {
+      const jobId = typeof job.payload?.jobId === 'string' ? job.payload.jobId : '';
+      if (!jobId) throw new Error('Missing saved job id');
+      const workspace = readLocalWorkspace();
+      const processed = await processWorkspaceJob(jobId, workspace);
+      writeLocalWorkspace(processed);
+      const processedJob = processed.jobDescriptions.find((item) => item.id === jobId);
+      if (processedJob?.ingestionStatus === 'error') {
+        throw new Error(processedJob.processingError || 'Saved job processing failed');
       }
     } else {
       console.log('Unknown job type', job.type);

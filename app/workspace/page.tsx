@@ -7,15 +7,17 @@ import type { JobDescriptionEntry, LocalWorkspace, MemoryEntry, WorkspaceRole, W
 import { renderInterviewPrepMarkdown } from '@/lib/interviewPrep';
 import { inferJobMetadata } from '@/lib/jobMetadata';
 import { renderResumeLatex } from '@/lib/renderLatex';
-import { Plus, Moon, Sun, User, ClipboardList, X, FileText, Brain, LogOut, Link as LinkIcon, MessageSquareText, Copy } from 'lucide-react';
+import { DEADLINE_BUCKETS, groupDeadlines } from '@/lib/deadlines';
+import { Plus, Moon, Sun, User, ClipboardList, X, FileText, Brain, LogOut, Link as LinkIcon, MessageSquareText, Copy, Mail } from 'lucide-react';
 import Link from 'next/link';
 import AuditCard from '@/components/AuditCard';
 import QuickCopyPanel from '@/components/QuickCopyPanel';
+import { buildRefineConversationHistory } from '@/lib/refineHistory';
 
 const SESSION_COOKIE = 'jobops_workspace_session=active; path=/; max-age=2592000; SameSite=Lax';
 const CLEAR_SESSION_COOKIE = 'jobops_workspace_session=; path=/; max-age=0; SameSite=Lax';
 const THEME_STORAGE_KEY = 'jobops_theme';
-type StudioSection = 'jobs' | 'resume' | 'interview' | 'memory';
+type StudioSection = 'jobs' | 'resume' | 'interview' | 'memory' | 'deadlines';
 
 // Convert URLs and markdown links in message text to clickable HTML
 function renderMessageContent(text: string): string {
@@ -92,6 +94,10 @@ export default function CockpitChat() {
     text: '',
   });
   const [memorySearch, setMemorySearch] = useState('');
+  const [gmailLabel, setGmailLabel] = useState('JobOps');
+  const [gmailConnected, setGmailConnected] = useState(false);
+  const [gmailStatus, setGmailStatus] = useState('');
+  const [gmailSyncing, setGmailSyncing] = useState(false);
   const [jobDescriptions, setJobDescriptions] = useState<JobDescriptionEntry[]>(() =>
     loadStoredValue<JobDescriptionEntry[]>('jobops_job_descriptions', [])
   );
@@ -136,6 +142,7 @@ export default function CockpitChat() {
     baseResumeProfile,
   });
   const canEditWorkspace = session?.role === 'owner' || session?.role === 'editor';
+  const deadlineGroups = groupDeadlines(jobDescriptions);
   const filteredMemories = memories.filter((memory) => {
     const query = memorySearch.trim().toLowerCase();
     if (!query) return true;
@@ -283,6 +290,20 @@ export default function CockpitChat() {
     };
   }, []);
 
+  useEffect(() => {
+    fetch('/api/gmail/status')
+      .then((response) => response.json())
+      .then((data) => {
+        if (data.gmail) {
+          setGmailConnected(Boolean(data.gmail.connected));
+          setGmailLabel(data.gmail.label || 'JobOps');
+        }
+      })
+      .catch(() => {
+        // Gmail settings remain available when the local API is offline.
+      });
+  }, []);
+
   const appendAssistantMessage = (content: string) => {
     const assistantMessage: Message = {
       id: crypto.randomUUID(),
@@ -315,6 +336,36 @@ export default function CockpitChat() {
       window.location.href = '/';
     }
     saveLocalWorkspace({ session: null });
+  };
+
+  const connectGmail = () => {
+    window.location.href = '/api/gmail/connect';
+  };
+
+  const syncGmail = async () => {
+    setGmailSyncing(true);
+    setGmailStatus('Syncing the JobOps label...');
+    try {
+      const response = await fetch('/api/gmail/sync', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ label: gmailLabel.trim() || 'JobOps' }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Gmail sync failed');
+      setGmailConnected(true);
+      setGmailStatus(`Imported ${data.importedJobs} job(s) from ${data.importedCandidates} new message(s).`);
+    } catch (error) {
+      setGmailStatus(error instanceof Error ? error.message : 'Gmail sync failed');
+    } finally {
+      setGmailSyncing(false);
+    }
+  };
+
+  const disconnectGmail = async () => {
+    await fetch('/api/gmail/disconnect', { method: 'POST' });
+    setGmailConnected(false);
+    setGmailStatus('Gmail disconnected. Saved jobs were not removed.');
   };
 
   const persistMemories = (nextMemories: MemoryEntry[]) => {
@@ -661,6 +712,26 @@ export default function CockpitChat() {
     }
   };
 
+  const processSavedJob = async (job: JobDescriptionEntry) => {
+    if (!canEditWorkspace) return;
+    setJobLibraryStatus(`Queueing analysis for ${job.title}...`);
+    try {
+      const response = await fetch('/api/jobs/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jobId: job.id }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Could not queue job processing');
+      updateJobDescriptions((jobs) => jobs.map((item) => item.id === job.id
+        ? { ...item, ingestionStatus: 'processing', processingError: undefined }
+        : item));
+      setJobLibraryStatus(`Queued ${job.title} for local analysis.`);
+    } catch (error) {
+      setJobLibraryStatus(error instanceof Error ? error.message : 'Could not queue job processing');
+    }
+  };
+
   const generateInterviewPrep = async (job: JobDescriptionEntry) => {
     if (!canEditWorkspace) return;
     const profile = currentDraftProfile || baseResumeProfile;
@@ -844,6 +915,7 @@ export default function CockpitChat() {
             )}
           </div>
           <span>{job.company}{job.status ? ` - ${job.status}` : ''}</span>
+          {job.ingestionStatus && <span>Processing: {job.ingestionStatus}</span>}
           {job.url && (
             <a href={job.url} target="_blank" rel="noopener noreferrer">
               {job.url}
@@ -854,6 +926,9 @@ export default function CockpitChat() {
           {job.prepError && <p className="workspace-error">{job.prepError}</p>}
           {job.auditError && <p className="workspace-error">{job.auditError}</p>}
           <div className="workspace-card-actions">
+            <button onClick={() => processSavedJob(job)} disabled={!canEditWorkspace || job.ingestionStatus === 'processing'}>
+              {job.ingestionStatus === 'processing' ? 'Processing...' : 'Process'}
+            </button>
             <button onClick={() => tailorSavedJob(job)} disabled={!canEditWorkspace || job.status === 'tailoring' || (!baseResumeProfile && !currentDraftProfile)}>
               {job.status === 'tailoring' ? 'Tailoring...' : 'Tailor'}
             </button>
@@ -1092,6 +1167,7 @@ export default function CockpitChat() {
     setIsRefining(true);
 
     try {
+      const requestHistory = buildRefineConversationHistory(refineMessages, userMessage);
       const response = await fetch('/api/tailor/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1099,7 +1175,7 @@ export default function CockpitChat() {
           draftProfile: currentDraftProfile,
           jd: tailorJd,
           keywords: tailorKeywords,
-          history: refineMessages,
+          history: requestHistory,
           message: userMessage.content,
         }),
       });
@@ -1435,6 +1511,7 @@ export default function CockpitChat() {
                 { id: 'resume' as const, label: 'Resume', count: jobDescriptions.filter((job) => job.tailoredLatex).length },
                 { id: 'interview' as const, label: 'Interview', count: jobDescriptions.filter((job) => job.interviewPrep).length },
                 { id: 'memory' as const, label: 'Memory', count: memories.length },
+                { id: 'deadlines' as const, label: 'Deadlines', count: jobDescriptions.filter((job) => job.deadline).length },
               ].map((section) => (
                 <button
                   key={section.id}
@@ -1449,6 +1526,42 @@ export default function CockpitChat() {
             </nav>
 
             <section className="studio-section-view">
+              {activeStudioSection === 'deadlines' && (
+                <div className="deadline-dashboard">
+                  {DEADLINE_BUCKETS.map((bucket) => (
+                    <section className="studio-panel deadline-panel" key={bucket.id}>
+                      <div className="studio-panel-header">
+                        <div>
+                          <span>Attention</span>
+                          <h3>{bucket.label}</h3>
+                        </div>
+                        <span>{deadlineGroups[bucket.id].length}</span>
+                      </div>
+                      <div className="workspace-list">
+                        {deadlineGroups[bucket.id].length === 0 ? (
+                          <p className="workspace-empty">Nothing here.</p>
+                        ) : (
+                          deadlineGroups[bucket.id].map(({ job, dateLabel, daysUntil }) => (
+                            <article className="workspace-card deadline-card" key={job.id}>
+                              <div className="workspace-card-header">
+                                <strong>{job.title}</strong>
+                                <span>{dateLabel || 'Unknown'}</span>
+                              </div>
+                              <span>{job.company}</span>
+                              {daysUntil !== null && <p>{daysUntil < 0 ? `${Math.abs(daysUntil)} day(s) overdue` : daysUntil === 0 ? 'Due today' : `${daysUntil} day(s) remaining`}</p>}
+                              <p>Confidence: {job.deadlineConfidence || 'unknown'}</p>
+                              {job.deadlineEvidence && <p>Evidence: &quot;{job.deadlineEvidence}&quot;</p>}
+                              {job.deadlineSource && <p>Source: {job.deadlineSource}</p>}
+                              {job.url && <a href={job.url} target="_blank" rel="noopener noreferrer">Open source</a>}
+                            </article>
+                          ))
+                        )}
+                      </div>
+                    </section>
+                  ))}
+                </div>
+              )}
+
               {activeStudioSection === 'jobs' && (
                 <div className="studio-section-grid">
                   <div className="studio-panel studio-panel-compose">
@@ -1889,6 +2002,35 @@ export default function CockpitChat() {
                 ))
               )}
             </div>
+          </section>
+
+          <section className="workspace-section">
+            <div className="workspace-section-title">
+              <h3><Mail size={15} /> Gmail</h3>
+              <span>{gmailConnected ? 'Connected' : 'Not connected'}</span>
+            </div>
+            <p className="workspace-status">Read-only sync for messages labeled JobOps. Message IDs prevent repeat imports.</p>
+            <div className="workspace-form">
+              <input
+                value={gmailLabel}
+                onChange={(event) => setGmailLabel(event.target.value)}
+                placeholder="Gmail label"
+                disabled={!canEditWorkspace || gmailSyncing}
+              />
+              <div className="workspace-bulk-actions">
+                {!gmailConnected ? (
+                  <button onClick={connectGmail} disabled={!canEditWorkspace}>Connect Gmail</button>
+                ) : (
+                  <>
+                    <button onClick={syncGmail} disabled={!canEditWorkspace || gmailSyncing || !gmailLabel.trim()}>
+                      {gmailSyncing ? 'Syncing...' : 'Sync Gmail'}
+                    </button>
+                    <button onClick={disconnectGmail} disabled={!canEditWorkspace || gmailSyncing}>Disconnect</button>
+                  </>
+                )}
+              </div>
+            </div>
+            {gmailStatus && <p className="workspace-status">{gmailStatus}</p>}
           </section>
 
           <section className="workspace-section">
