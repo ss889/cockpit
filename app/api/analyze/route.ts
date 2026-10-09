@@ -10,9 +10,9 @@ export async function POST(request: NextRequest) {
 
     const result = await runAnalyze(jd);
     return NextResponse.json(result);
-  } catch (e) {
-    console.error('Analyze error:', e);
-    const msg = (e as any)?.message || String(e);
+  } catch (error: unknown) {
+    console.error('Analyze error:', error);
+    const msg = error instanceof Error ? error.message : String(error);
     return NextResponse.json({ error: `API Error: ${msg}` }, { status: 500 });
   }
 }

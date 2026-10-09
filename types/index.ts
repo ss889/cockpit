@@ -55,6 +55,6 @@ export interface APIAnalyzeRequest {
 }
 
 export interface APIAnalyzeResponse {
-  content?: any;
+  content?: unknown;
   error?: string;
 }

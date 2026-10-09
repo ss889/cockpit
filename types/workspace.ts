@@ -142,6 +142,9 @@ export type TailoredResumeVersion = {
   latex: string;
   qaBefore: number;
   qaAfter: number;
+  strategyVersion?: string;
+  verificationStatus?: "passed" | "failed" | "not_run";
+  pdfStatus?: "compiled" | "compile_error" | "not_run";
 };
 
 export type JobDescriptionEntry = {

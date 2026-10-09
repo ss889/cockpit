@@ -5,7 +5,184 @@
     "signedInAt": "2026-06-24T02:51:35.783Z"
   },
   "memories": [],
-  "jobDescriptions": [],
-  "baseResumeProfile": null,
-  "updatedAt": "2026-06-24T02:51:35.792Z"
+  "jobDescriptions": [
+    {
+      "id": "job-7267dc45-1e3b-4656-9d1e-e634a24d50cd",
+      "title": "Internet Brands Careers",
+      "company": "Associate AI Software Engineer",
+      "url": "https://jobs.jobvite.com/internetbrands/job/oSkoAfwU?__jvst=Job%20Board&__jvsd=LinkedIn",
+      "text": "Internet Brands Careers\nABOUT US\nOUR BRANDS\nNEWS\nWORK WITH US\nCONTACT US\nASSOCIATE AI SOFTWARE ENGINEER\nJob ID 2026-1760\n\nTechnology Newark, New Jersey\n\nAPPLY\nDescription\n\nAssociate AI Engineer \nKickstart your career in AI! We're looking for Associate AI Engineers to join our Central AI team. This role is perfect for someone smart and innovative who is eager to apply what they've learned in school (or internships) and grow into an AI-focused career path. Working in our Newark office, you'll collaborate with various departments and teams to develop and deploy next-generation AI tools that power smarter business decisions - learning hands-on, while making an impact from day one.\n\nThis is a unique chance to convert your passion for AI and automation into real-world solutions that drive organization-wide transformation across Internet Brands.\n\nWhat You’ll Do:\n\nAssist in Design and Documentation – Support senior team members by understanding business and product requirements, helping to determine possible solutions, documenting designs or simple solutions, and clearly communicating updates and technical details within the team.\nDevelopment of AI Enhanced Products – Develop internal and client facing solutions, leveraging Agentic AI to produce highly automated systems that may perform complex workflows through AI reasoning, acting, observing, planning, and self-refining.\nSupporting & Operationalization - Learn to deploy and validate your code in integration and production environments using standard build and merge processes. Gain exposure to key DevOps tools within our infrastructure, including basic logging, monitoring, and release workflows.\nDevelopment Support – Assist in troubleshooting, investigating issues, and applying fixes to ensure smooth operation of applications and services.\n\nAbout You:\n\nBachelors degree in Computer Science, Data Science, Applied Mathematics, (or any other engineering discipline)\nStrong programming skills with an object-oriented approach and understanding of security best practices. Experience with at least one modern programming language and its ecosystem.\nGenerative AI, Prompt Engineering & Agentic AI - Practical experience working with generative AI models such as GPT, Claude, and similar LLMs. Experience with coding agents, such as Claude Code, Cursor, Windsurf, and Gemini CLI. \nAdaptability & Learning Mindset - Willingness and ability to quickly learn and adapt to new technologies, frameworks, and tools as needed. Open to working across the stack to support the development of AI-powered solutions. Comfortable stepping beyond core skill sets to contribute wherever needed in the AI application lifecycle.\nCommunication Skills - Strong verbal and written communication skills to effectively collaborate with team members, understand business requirements, and clearly document solutions and updates.\n\nBonus Points:\n\nVersion control system - Experience with version control systems like Git, including basic workflows such as branching and merge requests.\nUnit Testing - Experience writing and running automated tests with any testing framework to ensure code quality and reliability. Able to catch bugs early through strong unit testing habits.\nAble to craft prompts to drive contextually relevant outputs and build basic agentic workflows (e.g., tool usage, multi-step reasoning, or dynamic context handling).  Experience integrating LLM APIs to build AI-powered features and workflows.\n\nWhy You'll Love This Role:\n\nWork on projects that matter. See results or learn from failures quickly.\nExposure to developing automated AI solutions in business. Direct influence on AI implementation projects with real business impact.\nHands-on learning and mentorship. Opportunities to evolve and explore different areas of GenAI and Technology. .\nA collaborative, supportive team environment.\n\nAt Internet Brands, we carefully consider a wide range of factors when determining compensation, including your background and experience. These considerations can cause your compensation to vary. We expect the compensation for this role to start at $60k and will depend on your skills, qualifications, and experience. We encourage all interested candidates to apply.\n \nIn addition to our awesome culture, we offer a comprehensive benefits package designed to support the health and well-being of you and your family. Our benefits include health insurance options such as medical, dental, and vision coverage, flexible spending accounts (FSA) for medical and dependent care, short-term and long-term disability insurance, and life and AD&D insurance. We also provide a 401(k) retirement savings plan with a company match, paid time off (PTO), paid holidays, as well as access to our Employee Assistance Program (EAP) and well-being coaching services. In addition, employees can take advantage of voluntary benefits such as home, auto and pet insurance, and discounted legal and financial services. For more details, feel free to inquire during the interview process.\n \nInternet Brands®, headquartered in El Segundo, Calif, is a fully integrated online media and software services company focused on four high-value vertical categories: Health, Automotive, Legal, and Home/Travel. The company's properties and platforms include the WebMD, Medscape, and Henry Schein ONE networks, which are the global leaders in their markets; Nolo, Avvo, and Martindale, which form the largest consumer information provider in the legal market; and CarsDirect, Fodor's Travel, and many others which are leaders in their key vertical markets. Internet Brands' award-winning consumer websites lead their categories and serve more than 250 million monthly visitors, while a full range of web presence offerings has established deep, long-term relationships with SMB and enterprise clients. The company's powerful, proprietary operating platform provides the flexibility and scalability to fuel the company's continued growth. Internet Brands is a portfolio company of KKR and Warburg Pincus.\n \nInternet Brands is an equal opportunity employer, and we welcome applicants from all backgrounds. We comply with all applicable laws and regulations, including the City of Los Angeles Fair Chance Initiative for Hiring Ordinance (FCIHO).\n\n \n\nAPPLY APPLY LATER\n← Back to Current Openings\nShare\nLinkedIn\nFacebook\nTwitter\nEmail\nPowered by Jobvite\nABOUT US\nOUR BRANDS\nAutomotive\nHealth\nHome and Travel\nLegal\nDiversified Media\nNEWS\nWORK WITH US\nSearch Openings\nCONTACT US\nFOLLOW US\nCopyright © 2014-2026 MH Sub I, LLC dba Internet Brands. All rights reserved. Privacy Policy | Terms of Use | Cookie Policy\nYou have been redirected to a Internet Brands job page",
+      "createdAt": "2026-10-06T19:44:44.821Z",
+      "sourceType": "extension",
+      "sourceName": "jobs.jobvite.com",
+      "sourceUrl": "https://jobs.jobvite.com/internetbrands/job/oSkoAfwU?__jvst=Job%20Board&__jvsd=LinkedIn",
+      "canonicalUrl": "https://jobs.jobvite.com/internetbrands/job/oSkoAfwU?__jvst=Job%20Board&__jvsd=LinkedIn",
+      "importedAt": "2026-10-06T19:44:44.821Z",
+      "updatedAt": "2026-10-06T19:44:44.821Z",
+      "applicationStatus": "saved",
+      "ingestionStatus": "processing",
+      "sourceMetadata": {
+        "captureId": "capture-8d93aa63-d59d-462e-ac88-7c8897ab5110"
+      },
+      "status": "ready",
+      "tailoredLatex": "\\documentclass[letterpaper,11pt]{article}\n\n\\usepackage{latexsym}\n\\usepackage[empty]{fullpage}\n\\usepackage{titlesec}\n\\usepackage{marvosym}\n\\usepackage[usenames,dvipsnames]{color}\n\\usepackage{verbatim}\n\\usepackage{enumitem}\n\\usepackage[hidelinks]{hyperref}\n\\usepackage{fancyhdr}\n\\usepackage[english]{babel}\n\\input{glyphtounicode}\n\n\\pagestyle{fancy}\n\\fancyhf{}\n\\fancyfoot{}\n\\renewcommand{\\headrulewidth}{0pt}\n\\renewcommand{\\footrulewidth}{0pt}\n\n\\addtolength{\\oddsidemargin}{-0.5in}\n\\addtolength{\\evensidemargin}{-0.5in}\n\\addtolength{\\textwidth}{1in}\n\\addtolength{\\topmargin}{-.5in}\n\\addtolength{\\textheight}{1.0in}\n\n\\urlstyle{same}\n\\raggedbottom\n\\raggedright\n\\setlength{\\tabcolsep}{0in}\n\n\\titleformat{\\section}{\n  \\vspace{-4pt}\\scshape\\raggedright\\large\n}{}{0em}{}[\\color{black}\\titlerule \\vspace{-5pt}]\n\n\\pdfgentounicode=1\n\n\\newcommand{\\resumeItem}[1]{\n  \\item\\small{\n    {#1 \\vspace{-2pt}}\n  }\n}\n\n\\newcommand{\\resumeSubheading}[4]{\n  \\vspace{-2pt}\\item\n    \\textbf{#1} \\hfill #2 \\\\\n    \\textit{\\small #3} \\hfill \\textit{\\small #4}\\vspace{-7pt}\n}\n\n\\newcommand{\\resumeProjectHeading}[2]{\n    \\item\n    \\small #1 \\hfill #2\\vspace{-7pt}\n}\n\n\\newcommand{\\resumeSubHeadingListStart}{\\begin{itemize}[leftmargin=0.15in, label={}]}\n\\newcommand{\\resumeSubHeadingListEnd}{\\end{itemize}}\n\\newcommand{\\resumeItemListStart}{\\begin{itemize}[label={\\textbullet}]}\n\\newcommand{\\resumeItemListEnd}{\\end{itemize}\\vspace{-5pt}}\n\n\\begin{document}\n\n\\begin{center}\n    \\textbf{\\Huge \\scshape Sadikul Saber} \\\\ \\vspace{1pt}\n    \\small 973-653-4274 $|$\n    \\href{mailto:saberahmed7058@gmail.com}{\\underline{saberahmed7058@gmail.com}} $|$\n    \\href{https://linkedin.com/in/sadikul-saber}{\\underline{linkedin.com/in/sadikul-saber}} $|$\n    \\href{https://github.com/ss889}{\\underline{github.com/ss889}}\n\\end{center}\n\n\\section{Education}\n  \\resumeSubHeadingListStart\n    \\resumeSubheading{New Jersey Institute of Technology}{Newark, NJ}{Bachelor of Science in Web and Information Systems}{May 2026}\n  \\resumeSubHeadingListEnd\n\n\\section{Skills}\n \\begin{itemize}[leftmargin=0.15in, label={}]\n    \\small{\\item{\n     \\textbf{AI Engineering}{: Large Language Models (LLMs), Agentic Workflows, Model Context Protocol (MCP), Retrieval-Augmented Generation (RAG), LangChain, Claude API, OpenAI API, Groq API, Spec-Based Development} \\\\\n     \\textbf{Languages}{: Python, TypeScript, JavaScript, HTML/CSS} \\\\\n     \\textbf{Frameworks \\& Tools}{: FastAPI, Next.js, React, Docker, Git, GitHub Actions, SQLite, pytest, Vitest, Cursor, VS Code Copilot} \\\\\n    }}\n \\end{itemize}\n\n\\section{Projects}\n    \\resumeSubHeadingListStart\n\n      \\resumeProjectHeading\n          {\\textbf{JobOps AI} $|$ \\emph{Next.js, TypeScript, Claude API, RAG, MCP, Docker, GitHub Actions}}{2025 -- Present}\n          \\resumeItemListStart\n            \\resumeItem{Built a full-stack career tool using Agentic AI that runs three sequential Claude tool calls with JSON schemas to parse job descriptions, analyze skill gaps, and suggest solutions with structured outputs typed across the stack}\n            \\resumeItem{Implemented a RAG pipeline backed by SQLite with OpenAI embeddings and built a deterministic eval suite to catch regressions in resume quality, ATS output, and response structure}\n            \\resumeItem{Deployed to Railway with Docker and CI/CD via GitHub Actions, exposed workspace data through a read-only MCP server with five tools, and validated behavior with Vitest tests}\n          \\resumeItemListEnd\n\n      \\resumeProjectHeading\n          {\\textbf{Company Intelligence Briefing Tool} $|$ \\emph{Python, FastAPI, Claude API, pytest}}{2025 -- Present}\n          \\resumeItemListStart\n            \\resumeItem{Built a FastAPI application using Claude with live web search to generate structured briefings covering tech stack, recent news, and strategic priorities}\n            \\resumeItem{Developed evaluation techniques to test response accuracy, consistency, and relevance across different company inputs, catching failure patterns and improving output quality through iterative refinement}\n            \\resumeItem{Wrote comprehensive unit tests covering API routes and output validation, and deployed to production, demonstrating hands-on ownership from development through operationalization}\n          \\resumeItemListEnd\n    \\resumeSubHeadingListEnd\n\n\\section{Experience}\n  \\resumeSubHeadingListStart\n\n    \\resumeSubheading\n      {Salon Receptionist}{May 2023 -- Present}\n      {JCPenney}{Wayne, NJ}\n      \\resumeItemListStart\n        \\resumeItem{Increased bookings by 15\\% by gathering and analyzing client feedback from 20+ daily interactions to identify patterns and act on insights with the marketing team}\n        \\resumeItem{Reduced onboarding friction for new staff by documenting technical workflows into clear step-by-step guidance accessible to team members with varying technical backgrounds}\n      \\resumeItemListEnd\n\n    \\resumeSubheading\n      {Secretary}{Fall 2024 -- Spring 2026}\n      {NJIT Anime Club}{Newark, NJ}\n      \\resumeItemListStart\n        \\resumeItem{Improved administrative efficiency by 25\\% through adoption of AI-assisted tools and onboarding members with different levels of technical experience}\n        \\resumeItem{Kept 10+ monthly club events on schedule and within scope by managing real-time scheduling and officer communications across shifting team priorities}\n      \\resumeItemListEnd\n  \\resumeSubHeadingListEnd\n\n\\end{document}\n",
+      "tailoredAt": "2026-10-06T21:40:58.109Z"
+    }
+  ],
+  "baseResumeProfile": {
+    "header": {
+      "name": "Sadikul Saber",
+      "phone": "973-653-4274",
+      "email": "saberahmed7058@gmail.com",
+      "linkedin": "linkedin.com/in/sadikul-saber",
+      "github": "github.com/ss889"
+    },
+    "education": [
+      {
+        "school": "New Jersey Institute of Technology",
+        "location": "Newark, NJ",
+        "degree": "Bachelor of Science in Web and Information Systems",
+        "dates": "May 2026"
+      }
+    ],
+    "skills": [
+      {
+        "category": "AI Engineering",
+        "items": [
+          "Large Language Models (LLMs)",
+          "Agentic Workflows",
+          "Model Context Protocol (MCP)",
+          "Retrieval-Augmented Generation (RAG)",
+          "LangChain",
+          "Claude API",
+          "OpenAI API",
+          "Groq API",
+          "Spec-Based Development"
+        ]
+      },
+      {
+        "category": "Languages",
+        "items": [
+          "Python",
+          "TypeScript",
+          "JavaScript",
+          "HTML/CSS"
+        ]
+      },
+      {
+        "category": "Frameworks & Tools",
+        "items": [
+          "FastAPI",
+          "Next.js",
+          "React",
+          "Docker",
+          "Git",
+          "GitHub Actions",
+          "SQLite",
+          "pytest",
+          "Vitest",
+          "Cursor",
+          "VS Code Copilot"
+        ]
+      }
+    ],
+    "projects": [
+      {
+        "id": "jobops-ai",
+        "title": "JobOps AI",
+        "tags": "Next.js, TypeScript, Claude API, RAG, MCP, Docker, GitHub Actions",
+        "status": "2025 -- Present",
+        "bullets": [
+          "Built a full-stack career tool that runs three sequential Claude tool calls, each with a defined JSON schema, to parse job descriptions, analyze skill gaps, and suggest targeted projects, with structured outputs typed across the entire stack",
+          "Improved response accuracy by implementing a RAG pipeline backed by SQLite with OpenAI embeddings, retrieving relevant records as context on each query, and built a deterministic eval suite to catch regressions in resume quality, ATS output, and response structure",
+          "Deployed to Railway with Docker and CI/CD via GitHub Actions, exposed workspace data through a read-only MCP server with five tools, and validated behavior with a Vitest test suite covering tool schemas and output parsing"
+        ]
+      },
+      {
+        "id": "company-intelligence-briefing-tool",
+        "title": "Company Intelligence Briefing Tool",
+        "tags": "Python, FastAPI, Claude API, pytest",
+        "status": "2025 -- Present",
+        "bullets": [
+          "Eliminated hours of manual company research by building a FastAPI application that uses Claude with live web search to generate structured briefings covering tech stack, recent news, and strategic priorities",
+          "Improved output quality by iterating on evaluation techniques, testing responses for factual accuracy, consistency, and relevance across different company inputs and correcting failure patterns",
+          "Wrote a pytest suite covering API routes and output validation, and deployed to Render, demonstrating end-to-end ownership from development through production"
+        ]
+      },
+      {
+        "id": "ai-funding-data-scraper",
+        "title": "AI Funding Data Scraper",
+        "tags": "Python, SQLite, Docker, pytest",
+        "status": "2025 -- Present",
+        "bullets": [
+          "Replaced hours of manual market research by engineering a fault-tolerant Python pipeline that extracts, deduplicates, and persists structured startup funding records across three normalized SQLite tables",
+          "Improved test coverage and deployment reliability by writing a pytest suite with mocked HTTP responses and containerizing the system with Docker for reproducible scheduled runs"
+        ]
+      }
+    ],
+    "experience": [
+      {
+        "id": "salon-receptionist",
+        "title": "Salon Receptionist",
+        "company": "JCPenney",
+        "location": "Wayne, NJ",
+        "dates": "May 2023 -- Present",
+        "bullets": [
+          "Increased bookings by 15% by collaborating with the marketing team to identify and act on client feedback gathered across 20+ daily interactions",
+          "Reduced onboarding friction for new staff by breaking down technical workflows into clear step-by-step guidance accessible to non-technical team members"
+        ]
+      },
+      {
+        "id": "secretary",
+        "title": "Secretary",
+        "company": "NJIT Anime Club",
+        "location": "Newark, NJ",
+        "dates": "Fall 2024 -- Spring 2026",
+        "bullets": [
+          "Improved administrative efficiency by 25% by driving adoption of AI-assisted scheduling and communication tools and onboarding members with varying technical backgrounds",
+          "Coordinated logistics and communications across a team of officers, keeping projects on track in a fast-moving environment with shifting priorities"
+        ]
+      }
+    ]
+  },
+  "sourceCaptures": [
+    {
+      "id": "capture-626bb132-8c30-4416-b8dd-59dfb3511b2b",
+      "url": "https://example.com/jobs/jobops-extension-check",
+      "title": "Extension check",
+      "visibleText": "Extension authentication check for a local test job.",
+      "pageTitle": "Extension check",
+      "sourceHost": "example.com",
+      "capturedAt": "2026-10-06T18:07:23.492Z",
+      "receivedAt": "2026-10-06T18:07:30.081Z"
+    },
+    {
+      "id": "capture-8d93aa63-d59d-462e-ac88-7c8897ab5110",
+      "url": "https://jobs.jobvite.com/internetbrands/job/oSkoAfwU?__jvst=Job%20Board&__jvsd=LinkedIn",
+      "title": "Internet Brands Careers - Associate AI Software Engineer",
+      "visibleText": "Internet Brands Careers\nABOUT US\nOUR BRANDS\nNEWS\nWORK WITH US\nCONTACT US\nASSOCIATE AI SOFTWARE ENGINEER\nJob ID 2026-1760\n\nTechnology Newark, New Jersey\n\nAPPLY\nDescription\n\nAssociate AI Engineer \nKickstart your career in AI! We're looking for Associate AI Engineers to join our Central AI team. This role is perfect for someone smart and innovative who is eager to apply what they've learned in school (or internships) and grow into an AI-focused career path. Working in our Newark office, you'll collaborate with various departments and teams to develop and deploy next-generation AI tools that power smarter business decisions - learning hands-on, while making an impact from day one.\n\nThis is a unique chance to convert your passion for AI and automation into real-world solutions that drive organization-wide transformation across Internet Brands.\n\nWhat You’ll Do:\n\nAssist in Design and Documentation – Support senior team members by understanding business and product requirements, helping to determine possible solutions, documenting designs or simple solutions, and clearly communicating updates and technical details within the team.\nDevelopment of AI Enhanced Products – Develop internal and client facing solutions, leveraging Agentic AI to produce highly automated systems that may perform complex workflows through AI reasoning, acting, observing, planning, and self-refining.\nSupporting & Operationalization - Learn to deploy and validate your code in integration and production environments using standard build and merge processes. Gain exposure to key DevOps tools within our infrastructure, including basic logging, monitoring, and release workflows.\nDevelopment Support – Assist in troubleshooting, investigating issues, and applying fixes to ensure smooth operation of applications and services.\n\nAbout You:\n\nBachelors degree in Computer Science, Data Science, Applied Mathematics, (or any other engineering discipline)\nStrong programming skills with an object-oriented approach and understanding of security best practices. Experience with at least one modern programming language and its ecosystem.\nGenerative AI, Prompt Engineering & Agentic AI - Practical experience working with generative AI models such as GPT, Claude, and similar LLMs. Experience with coding agents, such as Claude Code, Cursor, Windsurf, and Gemini CLI. \nAdaptability & Learning Mindset - Willingness and ability to quickly learn and adapt to new technologies, frameworks, and tools as needed. Open to working across the stack to support the development of AI-powered solutions. Comfortable stepping beyond core skill sets to contribute wherever needed in the AI application lifecycle.\nCommunication Skills - Strong verbal and written communication skills to effectively collaborate with team members, understand business requirements, and clearly document solutions and updates.\n\nBonus Points:\n\nVersion control system - Experience with version control systems like Git, including basic workflows such as branching and merge requests.\nUnit Testing - Experience writing and running automated tests with any testing framework to ensure code quality and reliability. Able to catch bugs early through strong unit testing habits.\nAble to craft prompts to drive contextually relevant outputs and build basic agentic workflows (e.g., tool usage, multi-step reasoning, or dynamic context handling).  Experience integrating LLM APIs to build AI-powered features and workflows.\n\nWhy You'll Love This Role:\n\nWork on projects that matter. See results or learn from failures quickly.\nExposure to developing automated AI solutions in business. Direct influence on AI implementation projects with real business impact.\nHands-on learning and mentorship. Opportunities to evolve and explore different areas of GenAI and Technology. .\nA collaborative, supportive team environment.\n\nAt Internet Brands, we carefully consider a wide range of factors when determining compensation, including your background and experience. These considerations can cause your compensation to vary. We expect the compensation for this role to start at $60k and will depend on your skills, qualifications, and experience. We encourage all interested candidates to apply.\n \nIn addition to our awesome culture, we offer a comprehensive benefits package designed to support the health and well-being of you and your family. Our benefits include health insurance options such as medical, dental, and vision coverage, flexible spending accounts (FSA) for medical and dependent care, short-term and long-term disability insurance, and life and AD&D insurance. We also provide a 401(k) retirement savings plan with a company match, paid time off (PTO), paid holidays, as well as access to our Employee Assistance Program (EAP) and well-being coaching services. In addition, employees can take advantage of voluntary benefits such as home, auto and pet insurance, and discounted legal and financial services. For more details, feel free to inquire during the interview process.\n \nInternet Brands®, headquartered in El Segundo, Calif, is a fully integrated online media and software services company focused on four high-value vertical categories: Health, Automotive, Legal, and Home/Travel. The company's properties and platforms include the WebMD, Medscape, and Henry Schein ONE networks, which are the global leaders in their markets; Nolo, Avvo, and Martindale, which form the largest consumer information provider in the legal market; and CarsDirect, Fodor's Travel, and many others which are leaders in their key vertical markets. Internet Brands' award-winning consumer websites lead their categories and serve more than 250 million monthly visitors, while a full range of web presence offerings has established deep, long-term relationships with SMB and enterprise clients. The company's powerful, proprietary operating platform provides the flexibility and scalability to fuel the company's continued growth. Internet Brands is a portfolio company of KKR and Warburg Pincus.\n \nInternet Brands is an equal opportunity employer, and we welcome applicants from all backgrounds. We comply with all applicable laws and regulations, including the City of Los Angeles Fair Chance Initiative for Hiring Ordinance (FCIHO).\n\n \n\nAPPLY APPLY LATER\n← Back to Current Openings\nShare\nLinkedIn\nFacebook\nTwitter\nEmail\nPowered by Jobvite\nABOUT US\nOUR BRANDS\nAutomotive\nHealth\nHome and Travel\nLegal\nDiversified Media\nNEWS\nWORK WITH US\nSearch Openings\nCONTACT US\nFOLLOW US\nCopyright © 2014-2026 MH Sub I, LLC dba Internet Brands. All rights reserved. Privacy Policy | Terms of Use | Cookie Policy\nYou have been redirected to a Internet Brands job page",
+      "pageTitle": "Internet Brands Careers - Associate AI Software Engineer",
+      "sourceHost": "jobs.jobvite.com",
+      "capturedAt": "2026-10-06T19:44:44.699Z",
+      "receivedAt": "2026-10-06T19:44:44.821Z"
+    },
+    {
+      "id": "capture-d8ef4290-4f40-4c5c-b678-4c817c908fdd",
+      "url": "https://jobs.jobvite.com/internetbrands/job/oSkoAfwU?__jvst=Job%20Board&__jvsd=LinkedIn",
+      "title": "Internet Brands Careers - Associate AI Software Engineer",
+      "visibleText": "Internet Brands Careers\nABOUT US\nOUR BRANDS\nNEWS\nWORK WITH US\nCONTACT US\nASSOCIATE AI SOFTWARE ENGINEER\nJob ID 2026-1760\n\nTechnology Newark, New Jersey\n\nAPPLY\nDescription\n\nAssociate AI Engineer \nKickstart your career in AI! We're looking for Associate AI Engineers to join our Central AI team. This role is perfect for someone smart and innovative who is eager to apply what they've learned in school (or internships) and grow into an AI-focused career path. Working in our Newark office, you'll collaborate with various departments and teams to develop and deploy next-generation AI tools that power smarter business decisions - learning hands-on, while making an impact from day one.\n\nThis is a unique chance to convert your passion for AI and automation into real-world solutions that drive organization-wide transformation across Internet Brands.\n\nWhat You’ll Do:\n\nAssist in Design and Documentation – Support senior team members by understanding business and product requirements, helping to determine possible solutions, documenting designs or simple solutions, and clearly communicating updates and technical details within the team.\nDevelopment of AI Enhanced Products – Develop internal and client facing solutions, leveraging Agentic AI to produce highly automated systems that may perform complex workflows through AI reasoning, acting, observing, planning, and self-refining.\nSupporting & Operationalization - Learn to deploy and validate your code in integration and production environments using standard build and merge processes. Gain exposure to key DevOps tools within our infrastructure, including basic logging, monitoring, and release workflows.\nDevelopment Support – Assist in troubleshooting, investigating issues, and applying fixes to ensure smooth operation of applications and services.\n\nAbout You:\n\nBachelors degree in Computer Science, Data Science, Applied Mathematics, (or any other engineering discipline)\nStrong programming skills with an object-oriented approach and understanding of security best practices. Experience with at least one modern programming language and its ecosystem.\nGenerative AI, Prompt Engineering & Agentic AI - Practical experience working with generative AI models such as GPT, Claude, and similar LLMs. Experience with coding agents, such as Claude Code, Cursor, Windsurf, and Gemini CLI. \nAdaptability & Learning Mindset - Willingness and ability to quickly learn and adapt to new technologies, frameworks, and tools as needed. Open to working across the stack to support the development of AI-powered solutions. Comfortable stepping beyond core skill sets to contribute wherever needed in the AI application lifecycle.\nCommunication Skills - Strong verbal and written communication skills to effectively collaborate with team members, understand business requirements, and clearly document solutions and updates.\n\nBonus Points:\n\nVersion control system - Experience with version control systems like Git, including basic workflows such as branching and merge requests.\nUnit Testing - Experience writing and running automated tests with any testing framework to ensure code quality and reliability. Able to catch bugs early through strong unit testing habits.\nAble to craft prompts to drive contextually relevant outputs and build basic agentic workflows (e.g., tool usage, multi-step reasoning, or dynamic context handling).  Experience integrating LLM APIs to build AI-powered features and workflows.\n\nWhy You'll Love This Role:\n\nWork on projects that matter. See results or learn from failures quickly.\nExposure to developing automated AI solutions in business. Direct influence on AI implementation projects with real business impact.\nHands-on learning and mentorship. Opportunities to evolve and explore different areas of GenAI and Technology. .\nA collaborative, supportive team environment.\n\nAt Internet Brands, we carefully consider a wide range of factors when determining compensation, including your background and experience. These considerations can cause your compensation to vary. We expect the compensation for this role to start at $60k and will depend on your skills, qualifications, and experience. We encourage all interested candidates to apply.\n \nIn addition to our awesome culture, we offer a comprehensive benefits package designed to support the health and well-being of you and your family. Our benefits include health insurance options such as medical, dental, and vision coverage, flexible spending accounts (FSA) for medical and dependent care, short-term and long-term disability insurance, and life and AD&D insurance. We also provide a 401(k) retirement savings plan with a company match, paid time off (PTO), paid holidays, as well as access to our Employee Assistance Program (EAP) and well-being coaching services. In addition, employees can take advantage of voluntary benefits such as home, auto and pet insurance, and discounted legal and financial services. For more details, feel free to inquire during the interview process.\n \nInternet Brands®, headquartered in El Segundo, Calif, is a fully integrated online media and software services company focused on four high-value vertical categories: Health, Automotive, Legal, and Home/Travel. The company's properties and platforms include the WebMD, Medscape, and Henry Schein ONE networks, which are the global leaders in their markets; Nolo, Avvo, and Martindale, which form the largest consumer information provider in the legal market; and CarsDirect, Fodor's Travel, and many others which are leaders in their key vertical markets. Internet Brands' award-winning consumer websites lead their categories and serve more than 250 million monthly visitors, while a full range of web presence offerings has established deep, long-term relationships with SMB and enterprise clients. The company's powerful, proprietary operating platform provides the flexibility and scalability to fuel the company's continued growth. Internet Brands is a portfolio company of KKR and Warburg Pincus.\n \nInternet Brands is an equal opportunity employer, and we welcome applicants from all backgrounds. We comply with all applicable laws and regulations, including the City of Los Angeles Fair Chance Initiative for Hiring Ordinance (FCIHO).\n\n \n\nAPPLY APPLY LATER\n← Back to Current Openings\nShare\nLinkedIn\nFacebook\nTwitter\nEmail\nPowered by Jobvite\nABOUT US\nOUR BRANDS\nAutomotive\nHealth\nHome and Travel\nLegal\nDiversified Media\nNEWS\nWORK WITH US\nSearch Openings\nCONTACT US\nFOLLOW US\nCopyright © 2014-2026 MH Sub I, LLC dba Internet Brands. All rights reserved. Privacy Policy | Terms of Use | Cookie Policy\nYou have been redirected to a Internet Brands job page",
+      "pageTitle": "Internet Brands Careers - Associate AI Software Engineer",
+      "sourceHost": "jobs.jobvite.com",
+      "capturedAt": "2026-10-06T19:45:19.996Z",
+      "receivedAt": "2026-10-06T19:45:20.006Z"
+    }
+  ],
+  "gmail": {
+    "connected": false,
+    "label": "JobOps",
+    "lastSyncAt": null,
+    "syncedMessageIds": []
+  },
+  "gmailCandidates": [],
+  "updatedAt": "2026-10-06T21:40:58.122Z"
 }

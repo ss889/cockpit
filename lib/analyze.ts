@@ -1,9 +1,13 @@
 import './patchAnthropicModel';
-import type * as Anthropic from '@anthropic-ai/sdk';
 import { createAnthropicClient } from './anthropicClient';
 import { tools, parseToolResults } from './tools';
 import { getSystemPrompt } from './promptStore';
 import { saveJobDescription, searchSimilar } from './database';
+
+type RagMatch = {
+  createdAt?: string;
+  text: string;
+};
 
 export async function runAnalyze(jd: string) {
   const apiKey = process.env.ANTHROPIC_API_KEY;
@@ -11,21 +15,21 @@ export async function runAnalyze(jd: string) {
 
   const client = createAnthropicClient();
 
-  let ragMatches = [];
+  let ragMatches: RagMatch[] = [];
   try {
     const vector = await import('./vector');
     const emb = await import('./embeddings');
     if (emb.embeddingsAvailable()) {
-      ragMatches = await vector.searchByEmbedding(jd, 3);
+      ragMatches = (await vector.searchByEmbedding(jd, 3)) as RagMatch[];
     } else {
-      ragMatches = searchSimilar(jd, 3);
+      ragMatches = searchSimilar(jd, 3) as RagMatch[];
     }
-  } catch (e) {
-    ragMatches = searchSimilar(jd, 3);
+  } catch {
+    ragMatches = searchSimilar(jd, 3) as RagMatch[];
   }
 
   const ragText = ragMatches.length
-    ? 'Relevant corpus excerpts:\n\n' + ragMatches.map((m: any) => `- (${m.createdAt}) ${m.text.slice(0, 800)}`).join('\n\n---\n\n')
+    ? 'Relevant corpus excerpts:\n\n' + ragMatches.map((m) => `- (${m.createdAt ?? 'unknown'}) ${m.text.slice(0, 800)}`).join('\n\n---\n\n')
     : '';
 
   const systemPromptWithRag = getSystemPrompt() + (ragText ? '\n\n' + ragText : '');
@@ -46,10 +50,7 @@ export async function runAnalyze(jd: string) {
   });
 
   const parsedResults = parseToolResults(response.content);
-  const textBlocks = response.content
-    .filter((block: any): block is any => block.type === 'text')
-    .map((block) => block.text.trim())
-    .filter(Boolean);
+  const textBlocks = response.content.flatMap((block) => block.type === 'text' ? [block.text.trim()].filter(Boolean) : []);
 
   const fallbackSummary = [
     parsedResults.parsed
@@ -72,7 +73,7 @@ export async function runAnalyze(jd: string) {
   let softwareSuggestions: string | null = null;
   try {
     if (parsedResults.projects && Array.isArray(parsedResults.projects.projects) && parsedResults.projects.projects.length) {
-      const projectsForPrompt = parsedResults.projects.projects.map((p: any) => ({ title: p.title, description: p.description || p.summary || '' }));
+      const projectsForPrompt = parsedResults.projects.projects.map((p: { title: string; description?: string; summary?: string }) => ({ title: p.title, description: p.description || p.summary || '' }));
       const projectsJson = JSON.stringify(projectsForPrompt, null, 2);
 
       const swResp = await client.messages.create({
@@ -87,10 +88,7 @@ export async function runAnalyze(jd: string) {
         ],
       });
 
-      const swTextBlocks = swResp.content
-        .filter((b: any): b is any => b.type === 'text')
-        .map((b: any) => b.text.trim())
-        .filter(Boolean);
+      const swTextBlocks = swResp.content.flatMap((b) => b.type === 'text' ? [b.text.trim()].filter(Boolean) : []);
 
       softwareSuggestions = swTextBlocks.join('\n\n') || null;
     }

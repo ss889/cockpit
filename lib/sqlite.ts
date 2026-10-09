@@ -1,7 +1,19 @@
 import path from 'path';
 import fs from 'fs';
 import { getDataDir } from './dataDir';
-let Database: any = null;
+
+type SqliteDatabase = {
+  pragma: (statement: string) => unknown;
+  exec: (sql: string) => unknown;
+  prepare: (sql: string) => {
+    run: (...args: unknown[]) => unknown;
+    all: (...args: unknown[]) => unknown[];
+  };
+};
+
+type SqliteConstructor = new (dbPath: string) => SqliteDatabase;
+
+let Database: SqliteConstructor | null = null;
 
 const DB_PATH = path.join(getDataDir(), "corpus.db");
 
@@ -14,16 +26,15 @@ export function available() {
   return !!Database;
 }
 
-let db: any = null;
+let db: SqliteDatabase | null = null;
 
 export function initDB() {
   if (!Database) {
     try {
       // avoid static analysis by bundlers - require at runtime
-      // eslint-disable-next-line @typescript-eslint/no-var-requires, no-eval
-      const rq: any = eval('require');
-      Database = rq('better-sqlite3');
-    } catch (e) {
+      const rq = (Function('return require')() as (id: string) => SqliteConstructor)('better-sqlite3');
+      Database = rq;
+    } catch {
       Database = null;
       return null;
     }
@@ -61,13 +72,13 @@ export function initDB() {
         INSERT INTO docs_fts(rowid, text) VALUES (new.rowid, new.text);
       END;
     `);
-  } catch (e) {
+  } catch {
     // fts may not be available; ignore
   }
   return db;
 }
 
-export function saveDoc(id: string, text: string, meta?: Record<string, any>) {
+export function saveDoc(id: string, text: string, meta?: Record<string, unknown>) {
   const d = initDB();
   if (!d) throw new Error("SQLite not available");
   const stmt = d.prepare("INSERT OR REPLACE INTO docs (id, text, meta, createdAt) VALUES (?, ?, ?, ?)");
@@ -79,17 +90,17 @@ export function searchFts(query: string, limit = 5) {
   const d = initDB();
   if (!d) return [];
   try {
-    const rows = d.prepare(`SELECT docs.id, docs.text, docs.meta, docs.createdAt, bm25(docs_fts) AS score FROM docs_fts JOIN docs ON docs_fts.rowid = docs.rowid WHERE docs_fts MATCH ? ORDER BY score LIMIT ?`).all(query, limit);
-    return rows.map((r: any) => ({ id: r.id, text: r.text, meta: r.meta ? JSON.parse(r.meta) : null, createdAt: r.createdAt, score: r.score }));
-  } catch (e) {
-    // fallback simple LIKE search
-    const rows = d.prepare("SELECT id, text, meta, createdAt FROM docs WHERE text LIKE ? LIMIT ?").all(`%${query}%`, limit);
-    return rows.map((r: any) => ({ id: r.id, text: r.text, meta: r.meta ? JSON.parse(r.meta) : null, createdAt: r.createdAt }));
+    const rows = d.prepare(`SELECT docs.id, docs.text, docs.meta, docs.createdAt, bm25(docs_fts) AS score FROM docs_fts JOIN docs ON docs_fts.rowid = docs.rowid WHERE docs_fts MATCH ? ORDER BY score LIMIT ?`).all(query, limit) as Array<{ id: string; text: string; meta: string | null; createdAt: string; score: number }>;
+    return rows.map((r) => ({ id: r.id, text: r.text, meta: r.meta ? JSON.parse(r.meta) : null, createdAt: r.createdAt, score: r.score }));
+  } catch {
+    const rows = d.prepare("SELECT id, text, meta, createdAt FROM docs WHERE text LIKE ? LIMIT ?").all(`%${query}%`, limit) as Array<{ id: string; text: string; meta: string | null; createdAt: string }>;
+    return rows.map((r) => ({ id: r.id, text: r.text, meta: r.meta ? JSON.parse(r.meta) : null, createdAt: r.createdAt }));
   }
 }
 
 export function listDocs() {
   const d = initDB();
   if (!d) return [];
-  return d.prepare("SELECT id, text, meta, createdAt FROM docs ORDER BY createdAt DESC LIMIT 1000").all().map((r: any) => ({ id: r.id, text: r.text, meta: r.meta ? JSON.parse(r.meta) : null, createdAt: r.createdAt }));
+  return d.prepare("SELECT id, text, meta, createdAt FROM docs ORDER BY createdAt DESC LIMIT 1000").all() as Array<{ id: string; text: string; meta: string | null; createdAt: string }>;
 }
+

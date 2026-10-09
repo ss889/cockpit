@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 
 interface TrackedJob {
   id: string;
@@ -13,16 +13,16 @@ interface TrackedJob {
 }
 
 export default function TrackerPanel() {
-  const [jobs, setJobs] = useState<TrackedJob[]>([]);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-    const saved = localStorage.getItem('tracked_jobs');
-    if (saved) {
-      setJobs(JSON.parse(saved));
+  const [jobs, setJobs] = useState<TrackedJob[]>(() => {
+    if (typeof window === 'undefined') return [];
+    const saved = window.localStorage.getItem('tracked_jobs');
+    if (!saved) return [];
+    try {
+      return JSON.parse(saved) as TrackedJob[];
+    } catch {
+      return [];
     }
-  }, []);
+  });
 
   const updateStatus = (id: string, status: TrackedJob['status']) => {
     const updated = jobs.map((job) =>
@@ -45,8 +45,6 @@ export default function TrackerPanel() {
     'Offer',
     'Rejected',
   ];
-
-  if (!mounted) return null;
 
   return (
     <div className="tracker-panel">

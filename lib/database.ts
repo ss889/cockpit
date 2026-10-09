@@ -8,10 +8,10 @@ const DATA_DIR = getDataDir();
 const CORPUS_FILE = path.join(DATA_DIR, "corpus.json");
 const BASE_PROFILE_FILE = path.join(DATA_DIR, "base-profile.json");
 
-type CorpusEntry = {
+export type CorpusEntry = {
   id: string;
   text: string;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown> | null;
   createdAt: string;
 };
 
@@ -25,7 +25,7 @@ function readAll(): CorpusEntry[] {
     ensureDataDir();
     const raw = fs.readFileSync(CORPUS_FILE, "utf8");
     return JSON.parse(raw || "[]");
-  } catch (e) {
+  } catch {
     return [];
   }
 }
@@ -50,12 +50,12 @@ export function getBaseProfile(): ResumeProfile | null {
     const raw = fs.readFileSync(BASE_PROFILE_FILE, "utf8");
     const parsed = JSON.parse(raw || "{}");
     return parsed.profile ?? null;
-  } catch (e) {
+  } catch {
     return null;
   }
 }
 
-export function saveJobDescription(text: string, meta?: Record<string, any>) {
+export function saveJobDescription(text: string, meta?: Record<string, unknown>) {
   if (sqliteHelper.available()) {
     const id = String(Date.now()) + "-" + Math.random().toString(36).slice(2, 9);
     sqliteHelper.saveDoc(id, text, meta || {});
@@ -81,7 +81,7 @@ export function searchSimilar(query: string, limit = 3) {
   if (sqliteHelper.available()) {
     try {
       return sqliteHelper.searchFts(query, limit);
-    } catch (e) {
+    } catch {
       // fallthrough to file-based search
     }
   }
@@ -100,11 +100,12 @@ export function searchSimilar(query: string, limit = 3) {
   return scores.filter((s) => s.score > 0).slice(0, limit).map((s) => s.item);
 }
 
-export function listCorpus() {
+export function listCorpus(): CorpusEntry[] {
   if (sqliteHelper.available()) {
     try {
-      return sqliteHelper.listDocs();
-    } catch (e) {
+      const rows = sqliteHelper.listDocs() as Array<{ id: string; text: string; meta: Record<string, unknown> | null; createdAt: string }>;
+      return rows.map((row) => ({ id: row.id, text: row.text, meta: row.meta ?? null, createdAt: row.createdAt }));
+    } catch {
       // fall through
     }
   }

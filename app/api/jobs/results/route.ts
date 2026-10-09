@@ -1,7 +1,7 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { listResults } from '@/lib/jobs';
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   try {
     const results = listResults();
     // return as array of { id, result }

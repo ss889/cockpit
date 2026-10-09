@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
+import { startTransition, useState, useRef, useEffect } from 'react';
 import { Message } from '@/types';
 import type { MatchAssessment, QAIssue, ResumeProfile } from '@/types/profile';
 import type { JobDescriptionEntry, LocalWorkspace, MemoryEntry, WorkspaceRole, WorkspaceSession } from '@/types/workspace';
@@ -13,6 +13,7 @@ import Link from 'next/link';
 import AuditCard from '@/components/AuditCard';
 import QuickCopyPanel from '@/components/QuickCopyPanel';
 import { buildRefineConversationHistory } from '@/lib/refineHistory';
+import { createTailoredResumeVersion } from '@/lib/tailoring/versions';
 
 const SESSION_COOKIE = 'jobops_workspace_session=active; path=/; max-age=2592000; SameSite=Lax';
 const CLEAR_SESSION_COOKIE = 'jobops_workspace_session=; path=/; max-age=0; SameSite=Lax';
@@ -123,6 +124,13 @@ export default function CockpitChat() {
   const [refineInput, setRefineInput] = useState('');
   const [refineIssues, setRefineIssues] = useState<QAIssue[]>([]);
   const [isRefining, setIsRefining] = useState(false);
+  const [strategicSummary, setStrategicSummary] = useState<{
+    themes: string[];
+    projects: string[];
+    gaps: string[];
+    ready: boolean;
+  } | null>(null);
+  const [isPdfExporting, setIsPdfExporting] = useState(false);
   const [baseResumeProfile, setBaseResumeProfile] = useState<ResumeProfile | null>(() => {
     if (typeof window === 'undefined') return null;
     try {
@@ -141,7 +149,7 @@ export default function CockpitChat() {
     jobDescriptions,
     baseResumeProfile,
   });
-  const canEditWorkspace = session?.role === 'owner' || session?.role === 'editor';
+  const canEditWorkspace = workspaceHydrated && (session?.role === 'owner' || session?.role === 'editor');
   const deadlineGroups = groupDeadlines(jobDescriptions);
   const filteredMemories = memories.filter((memory) => {
     const query = memorySearch.trim().toLowerCase();
@@ -248,6 +256,11 @@ export default function CockpitChat() {
   }, [theme]);
 
   useEffect(() => {
+    const storedSession = loadStoredValue<WorkspaceSession | null>('jobops_workspace_session', null);
+    if (storedSession) startTransition(() => setSession(storedSession));
+  }, []);
+
+  useEffect(() => {
     let active = true;
 
     async function hydrateWorkspace() {
@@ -257,6 +270,7 @@ export default function CockpitChat() {
         if (!active || !response.ok || !data.workspace) return;
 
         const workspace = data.workspace as LocalWorkspace;
+  const storedSession = loadStoredValue<WorkspaceSession | null>('jobops_workspace_session', null);
         if (!workspace.updatedAt) {
           await fetch('/api/workspace', {
             method: 'PUT',
@@ -266,7 +280,7 @@ export default function CockpitChat() {
           return;
         }
 
-        const nextSession = workspace.session ?? initialWorkspaceRef.current.session ?? null;
+        const nextSession = workspace.session ?? storedSession ?? initialWorkspaceRef.current.session ?? null;
         setSession(nextSession);
         setMemories(workspace.memories ?? []);
         setJobDescriptions(workspace.jobDescriptions ?? []);
@@ -656,7 +670,7 @@ export default function CockpitChat() {
 
   const tailorSavedJob = async (job: JobDescriptionEntry) => {
     if (!canEditWorkspace) return;
-    const profile = currentDraftProfile || baseResumeProfile;
+    const profile = baseResumeProfile;
     if (!profile) {
       setJobLibraryStatus('Set or attach a base resume before tailoring saved jobs.');
       return;
@@ -667,15 +681,38 @@ export default function CockpitChat() {
         item.id === job.id ? { ...item, status: 'tailoring', error: undefined } : item
       )
     );
+    setSelectedTailoredJobId(job.id);
+    setMatchAssessmentJobId(job.id);
+    setTailorJd(job.text);
     setTailorOpen(true);
     setTailorStatus('tailoring');
-    setTailorMessage(`Tailoring resume for ${job.title}...`);
+    setTailorMessage(`Analyzing priorities and tailoring ${job.title}...`);
 
     try {
-      const data = await generateTailoredResume(profile, job.text);
-      const latestLatex = renderResumeLatex(data.profile);
-      setSelectedTailoredJobId(job.id);
-      setMatchAssessmentJobId(job.id);
+      const response = await fetch('/api/tailor/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jd: job.text, profile }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Strategic tailoring failed');
+
+      setCurrentDraftProfile(data.profile);
+      setTailoredLatex(data.latex);
+      setTailorKeywords(data.strategy.keywords || []);
+      setQaReport({ before: data.qa, after: data.qa, autoFixed: false });
+      setRefineIssues(data.qa || []);
+      setStrategicSummary({
+        themes: data.resumeStrategy.themesToEmphasize || [],
+        projects: data.resumeStrategy.projectsToInclude || [],
+        gaps: data.resumeStrategy.evidenceGaps || [],
+        ready: Boolean(data.ready),
+      });
+      setTailorStatus('ready');
+      setTailorMessage(data.ready
+        ? 'Strategic draft passed factual verification and deterministic QA.'
+        : 'Strategic draft needs review before it is ready for export.');
+      const latestLatex = data.latex;
       updateJobDescriptions((jobs) =>
         jobs.map((item) =>
           item.id === job.id
@@ -683,14 +720,24 @@ export default function CockpitChat() {
                 ...item,
                 tailoredLatex: latestLatex,
                 tailoredAt: new Date().toISOString(),
-                status: 'ready',
-                error: undefined,
+                status: data.ready ? 'ready' : 'error',
+                error: data.ready ? undefined : 'Strategic verification or QA needs review',
+                resumeVersions: [...(item.resumeVersions || []), createTailoredResumeVersion({
+                  job: item,
+                  latex: latestLatex,
+                  provider: data.provider || 'anthropic',
+                  model: data.model || 'unknown',
+                  qaBefore: data.qa.length,
+                  qaAfter: data.qa.length,
+                  strategyVersion: 'strategy-v1',
+                  verificationStatus: data.verification?.passed ? 'passed' : 'failed',
+                })],
               }
             : item
         )
       );
-      setJobLibraryStatus(`Tailored resume ready for ${job.title}.`);
-      appendAssistantMessage(`Tailored resume ready for ${job.title}. Open Workspace to download the saved .tex file.`);
+      setJobLibraryStatus(`Strategic resume draft ready for ${job.title}.`);
+      appendAssistantMessage(`Strategic resume draft ready for ${job.title}. Open Tailor Resume to review the strategy and export it.`);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Failed to tailor saved job';
       updateJobDescriptions((jobs) =>
@@ -850,7 +897,16 @@ export default function CockpitChat() {
     }
   };
 
-  const renderSavedJobCard = (job: JobDescriptionEntry, compact = false) => (
+  const renderSavedJobCard = (job: JobDescriptionEntry, compact = false) => {
+    const hasProfile = Boolean(baseResumeProfile || currentDraftProfile);
+    const isProcessing = job.ingestionStatus === 'processing';
+    const nextStep = isProcessing
+      ? 'Processing job details...'
+      : hasProfile
+        ? 'Ready for tailoring, interview prep, or an ATS audit.'
+        : 'Set a base resume to unlock tailoring, interview prep, and audit.';
+
+    return (
     <article key={job.id} className={`workspace-card ${compact ? 'workspace-card-compact' : ''}`}>
       {editingJobId === job.id ? (
         <>
@@ -915,7 +971,7 @@ export default function CockpitChat() {
             )}
           </div>
           <span>{job.company}{job.status ? ` - ${job.status}` : ''}</span>
-          {job.ingestionStatus && <span>Processing: {job.ingestionStatus}</span>}
+          <span className="workspace-card-next-step">{nextStep}</span>
           {job.url && (
             <a href={job.url} target="_blank" rel="noopener noreferrer">
               {job.url}
@@ -929,29 +985,31 @@ export default function CockpitChat() {
             <button onClick={() => processSavedJob(job)} disabled={!canEditWorkspace || job.ingestionStatus === 'processing'}>
               {job.ingestionStatus === 'processing' ? 'Processing...' : 'Process'}
             </button>
-            <button onClick={() => tailorSavedJob(job)} disabled={!canEditWorkspace || job.status === 'tailoring' || (!baseResumeProfile && !currentDraftProfile)}>
-              {job.status === 'tailoring' ? 'Tailoring...' : 'Tailor'}
-            </button>
-            <button onClick={() => previewJobLatex(job)} disabled={!job.tailoredLatex}>
-              View .tex
-            </button>
-            <button onClick={() => copyJobLatex(job)} disabled={!job.tailoredLatex}>
-              <Copy size={15} />
-              Copy .tex
-            </button>
-            <button onClick={() => downloadJobLatex(job)} disabled={!job.tailoredLatex}>
-              Download .tex
-            </button>
-            <button onClick={() => generateInterviewPrep(job)} disabled={!canEditWorkspace || job.prepStatus === 'generating' || (!baseResumeProfile && !currentDraftProfile)}>
-              <MessageSquareText size={15} />
-              {job.prepStatus === 'generating' ? 'Prepping...' : 'Prep'}
-            </button>
-            <button onClick={() => downloadInterviewPrep(job)} disabled={!job.interviewPrep}>
-              Download Prep
-            </button>
-            <button onClick={() => auditSavedJob(job)} disabled={!canEditWorkspace || job.auditStatus === 'auditing' || auditCoolingDown || (!baseResumeProfile && !currentDraftProfile)}>
-              {job.auditStatus === 'auditing' ? 'Auditing...' : 'Audit'}
-            </button>
+            {hasProfile && (
+              <>
+                <button onClick={() => tailorSavedJob(job)} disabled={!canEditWorkspace || job.status === 'tailoring'}>
+                  {job.status === 'tailoring' ? 'Tailoring...' : 'Tailor'}
+                </button>
+                <button onClick={() => generateInterviewPrep(job)} disabled={!canEditWorkspace || job.prepStatus === 'generating'}>
+                  <MessageSquareText size={15} />
+                  {job.prepStatus === 'generating' ? 'Prepping...' : 'Prep'}
+                </button>
+                <button onClick={() => auditSavedJob(job)} disabled={!canEditWorkspace || job.auditStatus === 'auditing' || auditCoolingDown}>
+                  {job.auditStatus === 'auditing' ? 'Auditing...' : 'Audit'}
+                </button>
+              </>
+            )}
+            {job.tailoredLatex && (
+              <>
+                <button onClick={() => previewJobLatex(job)}>View .tex</button>
+                <button onClick={() => copyJobLatex(job)}>
+                  <Copy size={15} />
+                  Copy .tex
+                </button>
+                <button onClick={() => downloadJobLatex(job)}>Download .tex</button>
+              </>
+            )}
+            {job.interviewPrep && <button onClick={() => downloadInterviewPrep(job)}>Download Prep</button>}
           </div>
           {job.auditReport && <AuditCard report={job.auditReport} compact={compact} />}
           {job.interviewPrep && !compact && (
@@ -982,7 +1040,8 @@ export default function CockpitChat() {
         </>
       )}
     </article>
-  );
+    );
+  };
 
   const handleChatTailorRequest = async (jdText: string, resumeSource?: string) => {
     setTailorOpen(true);
@@ -1152,18 +1211,17 @@ export default function CockpitChat() {
     copyTextToClipboard(latestLatex, 'Copied current tailored .tex.');
   };
 
-  const handleRefineResume = async () => {
-    if (!refineInput.trim() || !currentDraftProfile) return;
+  const refineResumeWithMessage = async (message: string) => {
+    if (!message.trim() || !currentDraftProfile) return;
 
     const userMessage: Message = {
       id: crypto.randomUUID(),
       role: 'user',
-      content: refineInput,
+      content: message.trim(),
       timestamp: new Date().toISOString(),
     };
     const nextHistory = [...refineMessages, userMessage];
     setRefineMessages(nextHistory);
-    setRefineInput('');
     setIsRefining(true);
 
     try {
@@ -1185,6 +1243,24 @@ export default function CockpitChat() {
       setCurrentDraftProfile(data.updatedProfile);
       setTailoredLatex(renderResumeLatex(data.updatedProfile));
       setRefineIssues(data.newIssues || []);
+      const assessmentResponse = await fetch('/api/tailor/assess', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ profile: data.updatedProfile, keywords: tailorKeywords }),
+      });
+      if (assessmentResponse.ok) {
+        const assessmentData = await assessmentResponse.json();
+        setMatchAssessment(assessmentData.match || null);
+      }
+      if (selectedTailoredJobId) {
+        updateJobDescriptions((jobs) =>
+          jobs.map((job) =>
+            job.id === selectedTailoredJobId
+              ? { ...job, tailoredLatex: renderResumeLatex(data.updatedProfile), tailoredAt: new Date().toISOString() }
+              : job
+          )
+        );
+      }
 
       const assistantMessage: Message = {
         id: crypto.randomUUID(),
@@ -1204,6 +1280,90 @@ export default function CockpitChat() {
     } finally {
       setIsRefining(false);
     }
+  };
+
+  const handleRefineResume = () => {
+    if (!refineInput.trim()) return;
+    const message = refineInput.trim();
+    setRefineInput('');
+    void refineResumeWithMessage(message);
+  };
+
+  const handleStrategicTailor = async () => {
+    if (!tailorJd || !baseResumeProfile || isRefining) return;
+    setIsRefining(true);
+    setTailorStatus('tailoring');
+    setTailorMessage('Analyzing priorities, mapping evidence, and generating a grounded draft...');
+    try {
+      const response = await fetch('/api/tailor/v2', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ jd: tailorJd, profile: baseResumeProfile }),
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Strategic tailoring failed');
+
+      setCurrentDraftProfile(data.profile);
+      setTailoredLatex(data.latex);
+      setTailorKeywords(data.strategy.keywords || []);
+      setRefineIssues(data.qa || []);
+      setStrategicSummary({
+        themes: data.resumeStrategy.themesToEmphasize || [],
+        projects: data.resumeStrategy.projectsToInclude || [],
+        gaps: data.resumeStrategy.evidenceGaps || [],
+        ready: Boolean(data.ready),
+      });
+      setTailorStatus('ready');
+      setTailorMessage(data.ready
+        ? 'Strategic draft passed factual verification and deterministic QA.'
+        : 'Strategic draft needs review before it is ready for export.');
+      if (selectedTailoredJobId) {
+        updateJobDescriptions((jobs) =>
+          jobs.map((job) => {
+            if (job.id !== selectedTailoredJobId) return job;
+            const version = createTailoredResumeVersion({
+              job,
+              latex: data.latex,
+              provider: data.provider || 'anthropic',
+              model: data.model || 'unknown',
+              qaBefore: data.qa.length,
+              qaAfter: data.qa.length,
+              strategyVersion: 'strategy-v1',
+              verificationStatus: data.verification?.passed ? 'passed' : 'failed',
+            });
+            return {
+              ...job,
+              tailoredLatex: data.latex,
+              tailoredAt: new Date().toISOString(),
+              status: data.ready ? 'ready' : 'error',
+              error: data.ready ? undefined : 'Strategic verification or QA needs review',
+              resumeVersions: [...(job.resumeVersions || []), version],
+            };
+          })
+        );
+      }
+    } catch (error) {
+      setTailorStatus('error');
+      setTailorMessage(error instanceof Error ? error.message : 'Strategic tailoring failed');
+    } finally {
+      setIsRefining(false);
+    }
+  };
+
+  const handleAutoRefineResume = () => {
+    if (!currentDraftProfile || isRefining) return;
+    const issues = refineIssues.length > 0 ? refineIssues : qaReport?.after || [];
+    const issueSummary = issues
+      .map((issue) => `${issue.type} at ${issue.location}: ${issue.detail}`)
+      .join('; ');
+    const requiredGaps = matchAssessment?.required_gaps.join(', ') || 'none identified';
+    const message = [
+      'Automatically refine this tailored resume to address every remaining QA issue and improve truthful keyword coverage.',
+      `QA issues: ${issueSummary || 'none listed'}.`,
+      `Required keyword gaps: ${requiredGaps}.`,
+      'Make only evidence-supported edits from the current profile. Do not invent experience, metrics, tools, or claims. Keep unchanged bullets untouched.',
+    ].join(' ');
+    void refineResumeWithMessage(message);
   };
 
   const tailoredJobs = jobDescriptions.filter((job) => job.tailoredLatex);
@@ -1231,6 +1391,33 @@ export default function CockpitChat() {
       return;
     }
     copyTailoredLatex();
+  };
+  const downloadPreviewPdf = async () => {
+    if (!previewLatex || isPdfExporting) return;
+    setIsPdfExporting(true);
+    try {
+      const response = await fetch('/api/tailor/pdf', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ latex: previewLatex }),
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data.error || 'PDF compilation failed');
+      }
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'tailored-resume.pdf';
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setTailorMessage(error instanceof Error ? error.message : 'PDF compilation failed');
+      setTailorStatus('error');
+    } finally {
+      setIsPdfExporting(false);
+    }
   };
 
   return (
@@ -1289,6 +1476,9 @@ export default function CockpitChat() {
             <div className="tailor-actions">
               <button onClick={handleIngestResume} disabled={tailorStatus === 'ingesting' || !baseResumeLatex.trim()}>
                 {tailorStatus === 'ingesting' ? 'Saving...' : 'Set as Base Profile'}
+              </button>
+              <button onClick={handleStrategicTailor} disabled={isRefining || !tailorJd || !baseResumeProfile}>
+                {isRefining ? 'Strategic tailoring...' : 'Strategic Tailor'}
               </button>
               <button onClick={copyTailoredLatex} disabled={!tailoredLatex}>
                 <Copy size={15} />
@@ -1372,6 +1562,9 @@ export default function CockpitChat() {
                     <button onClick={downloadPreviewLatex} type="button">
                       Download .tex
                     </button>
+                    <button onClick={downloadPreviewPdf} type="button" disabled={isPdfExporting}>
+                      {isPdfExporting ? 'Compiling PDF...' : 'Download PDF'}
+                    </button>
                   </div>
                 </div>
                 <pre className="latex-preview" aria-label="Generated tailored resume LaTeX">
@@ -1390,6 +1583,31 @@ export default function CockpitChat() {
                     <strong>QA:</strong> {qaReport.before.length} issue(s) before revision, {qaReport.after.length} after revision.
                     {qaReport.after.length > 0 ? ` Remaining: ${qaReport.after.map((issue) => issue.type).join(', ')}` : ' Clean after deterministic checks.'}
                   </p>
+                )}
+                {currentDraftProfile && (refineIssues.length > 0 || Boolean(matchAssessment?.required_gaps.length)) && (
+                  <button
+                    className="refine-auto-button"
+                    onClick={handleAutoRefineResume}
+                    disabled={isRefining}
+                  >
+                    {isRefining ? 'Refining remaining issues...' : 'Refine remaining issues'}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {strategicSummary && (
+              <div className="strategy-preview">
+                <div className="strategy-preview-header">
+                  <strong>Strategic plan</strong>
+                  <span className={strategicSummary.ready ? 'strategy-ready' : 'strategy-review'}>
+                    {strategicSummary.ready ? 'Ready' : 'Needs review'}
+                  </span>
+                </div>
+                <p><strong>Emphasize:</strong> {strategicSummary.themes.join(', ') || 'No high-priority themes identified.'}</p>
+                <p><strong>Include:</strong> {strategicSummary.projects.join(', ') || 'Keep current project selection.'}</p>
+                {strategicSummary.gaps.length > 0 && (
+                  <p><strong>Evidence gaps:</strong> {strategicSummary.gaps.join(', ')}</p>
                 )}
               </div>
             )}

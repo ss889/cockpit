@@ -5,11 +5,10 @@ import { Message } from '@/types';
 
 interface ChatPanelProps {
   isEnabled: boolean;
-  jd: string;
   onSendMessage: (message: string) => Promise<string>;
 }
 
-const ChatPanel: React.FC<ChatPanelProps> = ({ isEnabled, jd, onSendMessage }) => {
+const ChatPanel: React.FC<ChatPanelProps> = ({ isEnabled, onSendMessage }) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isLoading, setIsLoading] = useState(false);

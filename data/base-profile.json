@@ -1,0 +1,119 @@
+{
+  "profile": {
+    "header": {
+      "name": "Sadikul Saber",
+      "phone": "973-653-4274",
+      "email": "saberahmed7058@gmail.com",
+      "linkedin": "linkedin.com/in/sadikul-saber",
+      "github": "github.com/ss889"
+    },
+    "education": [
+      {
+        "school": "New Jersey Institute of Technology",
+        "location": "Newark, NJ",
+        "degree": "Bachelor of Science in Web and Information Systems",
+        "dates": "May 2026"
+      }
+    ],
+    "skills": [
+      {
+        "category": "AI Engineering",
+        "items": [
+          "Large Language Models (LLMs)",
+          "Agentic Workflows",
+          "Model Context Protocol (MCP)",
+          "Retrieval-Augmented Generation (RAG)",
+          "LangChain",
+          "Claude API",
+          "OpenAI API",
+          "Groq API",
+          "Spec-Based Development"
+        ]
+      },
+      {
+        "category": "Languages",
+        "items": [
+          "Python",
+          "TypeScript",
+          "JavaScript",
+          "HTML/CSS"
+        ]
+      },
+      {
+        "category": "Frameworks & Tools",
+        "items": [
+          "FastAPI",
+          "Next.js",
+          "React",
+          "Docker",
+          "Git",
+          "GitHub Actions",
+          "SQLite",
+          "pytest",
+          "Vitest",
+          "Cursor",
+          "VS Code Copilot"
+        ]
+      }
+    ],
+    "projects": [
+      {
+        "id": "jobops-ai",
+        "title": "JobOps AI",
+        "tags": "Next.js, TypeScript, Claude API, RAG, MCP, Docker, GitHub Actions",
+        "status": "2025 -- Present",
+        "bullets": [
+          "Built a full-stack career tool that runs three sequential Claude tool calls, each with a defined JSON schema, to parse job descriptions, analyze skill gaps, and suggest targeted projects, with structured outputs typed across the entire stack",
+          "Improved response accuracy by implementing a RAG pipeline backed by SQLite with OpenAI embeddings, retrieving relevant records as context on each query, and built a deterministic eval suite to catch regressions in resume quality, ATS output, and response structure",
+          "Deployed to Railway with Docker and CI/CD via GitHub Actions, exposed workspace data through a read-only MCP server with five tools, and validated behavior with a Vitest test suite covering tool schemas and output parsing"
+        ]
+      },
+      {
+        "id": "company-intelligence-briefing-tool",
+        "title": "Company Intelligence Briefing Tool",
+        "tags": "Python, FastAPI, Claude API, pytest",
+        "status": "2025 -- Present",
+        "bullets": [
+          "Eliminated hours of manual company research by building a FastAPI application that uses Claude with live web search to generate structured briefings covering tech stack, recent news, and strategic priorities",
+          "Improved output quality by iterating on evaluation techniques, testing responses for factual accuracy, consistency, and relevance across different company inputs and correcting failure patterns",
+          "Wrote a pytest suite covering API routes and output validation, and deployed to Render, demonstrating end-to-end ownership from development through production"
+        ]
+      },
+      {
+        "id": "ai-funding-data-scraper",
+        "title": "AI Funding Data Scraper",
+        "tags": "Python, SQLite, Docker, pytest",
+        "status": "2025 -- Present",
+        "bullets": [
+          "Replaced hours of manual market research by engineering a fault-tolerant Python pipeline that extracts, deduplicates, and persists structured startup funding records across three normalized SQLite tables",
+          "Improved test coverage and deployment reliability by writing a pytest suite with mocked HTTP responses and containerizing the system with Docker for reproducible scheduled runs"
+        ]
+      }
+    ],
+    "experience": [
+      {
+        "id": "salon-receptionist",
+        "title": "Salon Receptionist",
+        "company": "JCPenney",
+        "location": "Wayne, NJ",
+        "dates": "May 2023 -- Present",
+        "bullets": [
+          "Increased bookings by 15% by collaborating with the marketing team to identify and act on client feedback gathered across 20+ daily interactions",
+          "Reduced onboarding friction for new staff by breaking down technical workflows into clear step-by-step guidance accessible to non-technical team members"
+        ]
+      },
+      {
+        "id": "secretary",
+        "title": "Secretary",
+        "company": "NJIT Anime Club",
+        "location": "Newark, NJ",
+        "dates": "Fall 2024 -- Spring 2026",
+        "bullets": [
+          "Improved administrative efficiency by 25% by driving adoption of AI-assisted scheduling and communication tools and onboarding members with varying technical backgrounds",
+          "Coordinated logistics and communications across a team of officers, keeping projects on track in a fast-moving environment with shifting priorities"
+        ]
+      }
+    ]
+  },
+  "updatedAt": "2026-10-06T20:08:11.258Z"
+}

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 interface SidebarProps {
   activePanel: 'analyze' | 'search' | 'tracker';
@@ -79,7 +79,7 @@ function PromptEditor() {
       await fetch('/api/prompt', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
       setStatus('saved');
       setTimeout(() => setStatus('idle'), 2000);
-    } catch (e) {
+    } catch {
       setStatus('error');
     }
   };
@@ -93,14 +93,14 @@ function PromptEditor() {
       setPrompt(d.prompt || '');
       setStatus('saved');
       setTimeout(() => setStatus('idle'), 2000);
-    } catch (e) {
+    } catch {
       setStatus('error');
     }
   };
 
   return (
     <div className="prompt-editor">
-      <button onClick={() => setOpen((v) => !v)} className="prompt-header">// SYSTEM PROMPT {open ? '▾' : '▸'}</button>
+      <button onClick={() => setOpen((v) => !v)} className="prompt-header"><span>System Prompt</span> {open ? '▾' : '▸'}</button>
       {open && (
         <div style={{ marginTop: '0.5rem' }}>
           <textarea
@@ -124,17 +124,15 @@ function PromptEditor() {
 
 function QueueMonitor() {
   const [open, setOpen] = useState(false);
-  const [data, setData] = useState<any>(null);
+  type QueueStats = { total: number; pending: number; deferred: number; running: number; failed: number; };
+  type QueueItem = { id: string; type: string; status: string; retries?: number; nextRun?: string | null; };
+  type QueuePayload = { stats: QueueStats; jobs: QueueItem[] };
+
+  type ResultPreview = { error?: string; text?: string; [key: string]: unknown };
+  const [data, setData] = useState<QueuePayload | null>(null);
   const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!open) return;
-    fetchQueue();
-    const id = setInterval(fetchQueue, 5000);
-    return () => clearInterval(id);
-  }, [open]);
-
-  const fetchQueue = async () => {
+  const fetchQueue = useCallback(async () => {
     setLoading(true);
     try {
       const res = await fetch('/api/jobs/queue');
@@ -145,17 +143,24 @@ function QueueMonitor() {
         const rres = await fetch('/api/jobs/results');
         if (rres.ok) {
           const body = await rres.json();
-          const map: Record<string, any> = {};
-          for (const item of body.results || []) map[item.id] = item.result;
+          const map: Record<string, ResultPreview> = {};
+          for (const item of body.results || []) map[item.id] = item.result as ResultPreview;
           setResults(map);
         }
-      } catch (e) {
+      } catch {
         // ignore
       }
-    } catch (e) {
+    } catch {
       setData(null);
     } finally { setLoading(false); }
-  };
+  }, []);
+
+  useEffect(() => {
+    if (!open) return;
+    fetchQueue();
+    const id = setInterval(fetchQueue, 5000);
+    return () => clearInterval(id);
+  }, [fetchQueue, open]);
 
   const requeue = async (id: string) => {
     await fetch('/api/jobs/requeue', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
@@ -171,13 +176,13 @@ function QueueMonitor() {
     if (!confirm('Delete job and result? This cannot be undone.')) return;
     try {
       await fetch('/api/jobs/delete', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) });
-    } catch (e) {
+    } catch {
       // ignore
     }
     fetchQueue();
   };
 
-  const [results, setResults] = useState<Record<string, any>>({});
+  const [results, setResults] = useState<Record<string, ResultPreview>>({});
   const viewResult = async (id: string) => {
     try {
       const res = await fetch(`/api/jobs/result?id=${encodeURIComponent(id)}`);
@@ -194,7 +199,7 @@ function QueueMonitor() {
 
   return (
     <div className="queue-monitor">
-      <button onClick={() => setOpen((v) => !v)} className="prompt-header">// Queue {open ? '▾' : '▸'}</button>
+      <button onClick={() => setOpen((v) => !v)} className="prompt-header"><span>Queue</span> {open ? '▾' : '▸'}</button>
       {open && (
         <div style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
           {loading && <div>Loading...</div>}
@@ -205,7 +210,7 @@ function QueueMonitor() {
                 <strong>Stats:</strong> total {data.stats.total} • pending {data.stats.pending} • deferred {data.stats.deferred} • running {data.stats.running} • failed {data.stats.failed}
               </div>
               <div style={{ maxHeight: 200, overflow: 'auto' }}>
-                {data.jobs.map((j: any) => (
+                {data.jobs.map((j: QueueItem) => (
                   <div key={j.id} style={{ padding: '0.25rem 0', borderBottom: '1px solid #eee' }}>
                     <div><strong>{j.type}</strong> — {j.status} {j.retries ? `(${j.retries})` : ''}</div>
                     <div style={{ fontSize: '0.75rem' }}>{j.id}</div>
@@ -220,13 +225,22 @@ function QueueMonitor() {
                       <button onClick={() => viewResult(j.id)} className="btn">View</button>
                       <button onClick={() => deleteJob(j.id)} className="btn" style={{ marginLeft: 6 }}>Delete</button>
                     </div>
-                    {results[j.id] && (
-                      <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', background: '#fafafa', padding: 8 }}>
-                        {results[j.id].error && <div style={{ color: 'red' }}>{results[j.id].error}</div>}
-                        {results[j.id].text && <div>{results[j.id].text.slice(0, 600)}{results[j.id].text.length>600?'…':''}</div>}
-                        {!results[j.id].text && !results[j.id].error && <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(results[j.id], null, 2)}</pre>}
-                      </div>
-                    )}
+                    {results[j.id] && (() => {
+                      const result = results[j.id];
+                      return (
+                        <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', background: '#fafafa', padding: 8 }}>
+                          {result.error && <div style={{ color: 'red' }}>{result.error}</div>}
+                          {typeof result.text === 'string' && (
+                            <div>
+                              {result.text.slice(0, 600)}{result.text.length > 600 ? '…' : ''}
+                            </div>
+                          )}
+                          {typeof result.text !== 'string' && !result.error && (
+                            <pre style={{ whiteSpace: 'pre-wrap' }}>{JSON.stringify(result, null, 2)}</pre>
+                          )}
+                        </div>
+                      );
+                    })()}
                   </div>
                 ))}
               </div>

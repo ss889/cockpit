@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 
 interface JDInputProps {
   onAnalyze: (jd: string) => Promise<void>;
@@ -10,16 +10,17 @@ interface JDInputProps {
 
 const JDInput: React.FC<JDInputProps> = ({ onAnalyze, isLoading, onSavedRoleClick }) => {
   const [jd, setJd] = useState('');
-  const [savedRoles, setSavedRoles] = useState<Array<{ id: string; title: string; jd: string; savedAt: string }>>([]);
-  const [delayMinutes, setDelayMinutes] = useState('15');
-
-  // Load saved roles on mount
-  useEffect(() => {
-    const saved = localStorage.getItem('saved_roles');
-    if (saved) {
-      setSavedRoles(JSON.parse(saved));
+  const [savedRoles, setSavedRoles] = useState<Array<{ id: string; title: string; jd: string; savedAt: string }>>(() => {
+    if (typeof window === 'undefined') return [];
+    const saved = window.localStorage.getItem('saved_roles');
+    if (!saved) return [];
+    try {
+      return JSON.parse(saved) as Array<{ id: string; title: string; jd: string; savedAt: string }>;
+    } catch {
+      return [];
     }
-  }, []);
+  });
+  const [delayMinutes, setDelayMinutes] = useState('15');
 
   const handleAnalyze = useCallback(async () => {
     await onAnalyze(jd);
@@ -27,7 +28,7 @@ const JDInput: React.FC<JDInputProps> = ({ onAnalyze, isLoading, onSavedRoleClic
 
   const [enqueueing, setEnqueueing] = useState(false);
   const [queuedJob, setQueuedJob] = useState<string | null>(null);
-  const [queuedResult, setQueuedResult] = useState<any>(null);
+  const [queuedResult, setQueuedResult] = useState<unknown>(null);
 
   const handleEnqueue = useCallback(async () => {
     setEnqueueing(true);
@@ -90,23 +91,13 @@ const JDInput: React.FC<JDInputProps> = ({ onAnalyze, isLoading, onSavedRoleClic
     }
   }, [jd, delayMinutes]);
 
-  const handleSaveRole = useCallback((title: string) => {
-    const newRole = {
-      id: crypto.randomUUID(),
-      title,
-      jd,
-      savedAt: new Date().toISOString(),
-    };
-    const updated = [...savedRoles, newRole];
-    setSavedRoles(updated);
-    localStorage.setItem('saved_roles', JSON.stringify(updated));
-  }, [jd, savedRoles]);
-
   const handleDeleteRole = useCallback((id: string) => {
-    const updated = savedRoles.filter(role => role.id !== id);
-    setSavedRoles(updated);
-    localStorage.setItem('saved_roles', JSON.stringify(updated));
-  }, [savedRoles]);
+    setSavedRoles((current) => {
+      const updated = current.filter((role) => role.id !== id);
+      localStorage.setItem('saved_roles', JSON.stringify(updated));
+      return updated;
+    });
+  }, []);
 
   return (
     <div className="flex flex-col h-full">
@@ -177,7 +168,11 @@ const JDInput: React.FC<JDInputProps> = ({ onAnalyze, isLoading, onSavedRoleClic
             {queuedResult ? (
               <div style={{ marginTop: 6 }}>
                 <div style={{ fontWeight: 600 }}>Result preview</div>
-                <div style={{ fontSize: '0.85rem', marginTop: 4 }}>{queuedResult.text ? queuedResult.text.slice(0, 800) : JSON.stringify(queuedResult).slice(0, 800)}</div>
+                <div style={{ fontSize: '0.85rem', marginTop: 4 }}>
+                  {typeof queuedResult === 'object' && queuedResult !== null && 'text' in queuedResult && typeof (queuedResult as { text?: string }).text === 'string'
+                    ? (queuedResult as { text: string }).text.slice(0, 800)
+                    : JSON.stringify(queuedResult).slice(0, 800)}
+                </div>
               </div>
             ) : (
               <div style={{ marginTop: 6 }} className="text-xs text-zinc-400">Waiting for worker to finish...</div>

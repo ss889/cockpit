@@ -6,28 +6,41 @@ const DATA_DIR = getDataDir();
 const QUEUE_FILE = path.join(DATA_DIR, 'queue.json');
 const LOCK_FILE = QUEUE_FILE + '.lock';
 
+type QueueJob = {
+  id: string;
+  type: string;
+  payload: Record<string, unknown>;
+  signature: string;
+  status: 'pending' | 'running' | 'done' | 'failed' | 'cancelled';
+  retries: number;
+  maxRetries: number;
+  createdAt: string;
+  nextRun: string;
+  lastError: string | null;
+  finishedAt?: string;
+};
+
 function ensure() {
   if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR, { recursive: true });
   if (!fs.existsSync(QUEUE_FILE)) fs.writeFileSync(QUEUE_FILE, JSON.stringify([]));
 }
 
-function read() {
+function read(): QueueJob[] {
   ensure();
   try {
     acquireLock();
     try {
-      return JSON.parse(fs.readFileSync(QUEUE_FILE, 'utf8') || '[]');
+      return JSON.parse(fs.readFileSync(QUEUE_FILE, 'utf8') || '[]') as QueueJob[];
     } finally {
       releaseLock();
     }
-  } catch (e) {
+  } catch {
     return [];
   }
 }
 
-function write(jobs: any[]) {
+function write(jobs: QueueJob[]) {
   ensure();
-  // atomic write: write to tmp file then rename
   const tmp = QUEUE_FILE + '.' + process.pid + '.tmp';
   acquireLock();
   try {
@@ -50,13 +63,14 @@ function acquireLock(timeout = 5000) {
     try {
       fs.writeFileSync(LOCK_FILE, String(process.pid), { flag: 'wx' });
       return;
-    } catch (e: any) {
-      if (e && e.code === 'EEXIST') {
+    } catch (error: unknown) {
+      const lockError = error as NodeJS.ErrnoException;
+      if (lockError && lockError.code === 'EEXIST') {
         if (Date.now() - start > timeout) throw new Error('Timeout acquiring queue lock');
         sleepSync(50);
         continue;
       }
-      throw e;
+      throw error;
     }
   }
 }
@@ -64,26 +78,25 @@ function acquireLock(timeout = 5000) {
 function releaseLock() {
   try {
     if (fs.existsSync(LOCK_FILE)) fs.unlinkSync(LOCK_FILE);
-  } catch (e) {
+  } catch {
     // ignore
   }
 }
 
-export function enqueue(type: string, payload: any = {}, opts: any = {}) {
+export function enqueue(type: string, payload: Record<string, unknown> = {}, opts: Record<string, unknown> = {}) {
   const jobs = read();
-  // dedupe by signature: avoid enqueuing identical pending job
-  const nextRun = opts.nextRun ? new Date(opts.nextRun).toISOString() : new Date().toISOString();
+  const nextRun = opts.nextRun ? new Date(String(opts.nextRun)).toISOString() : new Date().toISOString();
   const signature = JSON.stringify({ type, payload, nextRun: new Date(nextRun).getTime() > Date.now() ? nextRun : null });
-  const exists = jobs.find((j: any) => j.signature === signature && (j.status === 'pending' || j.status === 'running'));
+  const exists = jobs.find((j) => j.signature === signature && (j.status === 'pending' || j.status === 'running'));
   if (exists) return exists;
-  const job = {
+  const job: QueueJob = {
     id: String(Date.now()) + '-' + Math.random().toString(36).slice(2, 9),
     type,
     payload,
     signature,
     status: 'pending',
     retries: 0,
-    maxRetries: opts.maxRetries ?? 3,
+    maxRetries: Number(opts.maxRetries ?? 3),
     createdAt: new Date().toISOString(),
     nextRun,
     lastError: null,
@@ -93,10 +106,10 @@ export function enqueue(type: string, payload: any = {}, opts: any = {}) {
   return job;
 }
 
-export function scheduleJob(type: string, payload: any = {}, opts: any = {}) {
+export function scheduleJob(type: string, payload: Record<string, unknown> = {}, opts: Record<string, unknown> = {}) {
   const delayMinutes = Number(opts.delayMinutes ?? 0);
   const nextRun = opts.nextRun
-    ? new Date(opts.nextRun)
+    ? new Date(String(opts.nextRun))
     : new Date(Date.now() + Math.max(0, delayMinutes) * 60_000);
   return enqueue(type, payload, { ...opts, nextRun });
 }
@@ -104,9 +117,8 @@ export function scheduleJob(type: string, payload: any = {}, opts: any = {}) {
 export function fetchDue(limit = 1) {
   const jobs = read();
   const now = Date.now();
-  const due = jobs.filter((j: any) => j.status === 'pending' && new Date(j.nextRun).getTime() <= now).slice(0, limit);
-  // mark as in-progress
-  const ids = new Set(due.map((d: any) => d.id));
+  const due = jobs.filter((j) => j.status === 'pending' && new Date(j.nextRun).getTime() <= now).slice(0, limit);
+  const ids = new Set(due.map((d) => d.id));
   for (const j of jobs) if (ids.has(j.id)) j.status = 'running';
   write(jobs);
   return due;
@@ -118,7 +130,7 @@ export function markDone(id: string) {
   write(jobs);
 }
 
-export function markFailed(id: string, err: any) {
+export function markFailed(id: string, err: unknown) {
   const jobs = read();
   for (const j of jobs) {
     if (j.id === id) {
@@ -167,6 +179,6 @@ export function cancelJob(id: string) {
 
 export function deleteJobEntry(id: string) {
   const jobs = read();
-  const filtered = jobs.filter((j: any) => j.id !== id);
+  const filtered = jobs.filter((j) => j.id !== id);
   write(filtered);
 }

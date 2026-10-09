@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getSystemPrompt, setSystemPrompt, resetSystemPrompt, DEFAULT_SYSTEM_PROMPT } from '@/lib/promptStore';
+import { getSystemPrompt, setSystemPrompt, resetSystemPrompt } from '@/lib/promptStore';
 
 export async function GET() {
   return NextResponse.json({ prompt: getSystemPrompt() });
@@ -13,7 +13,7 @@ export async function POST(request: NextRequest) {
     }
     setSystemPrompt(body.prompt);
     return NextResponse.json({ success: true });
-  } catch (e) {
+  } catch {
     return NextResponse.json({ error: 'Failed to set prompt' }, { status: 500 });
   }
 }

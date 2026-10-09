@@ -33,12 +33,6 @@ export async function POST(req: Request) {
     const response = await anthropic.messages.create({
         model,
       max_tokens: 2000,
-      tools: [
-        {
-          type: 'web_search',
-          name: 'web_search',
-        } as any,
-      ],
       system: `You are a job search assistant. Search for real job listings matching the user's query.
 After searching, return ONLY a JSON array with no extra text, no markdown, no backticks.
 Each item in the array must have exactly these fields (all strings):

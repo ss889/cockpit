@@ -122,7 +122,7 @@ async function tailorProfile(baseProfile: ResumeProfile, jd: string, keywords: s
   return applyTailoring(baseProfile, output);
 }
 
-async function assessMatch(baseProfile: ResumeProfile, keywords: string[]): Promise<MatchAssessment> {
+export async function assessMatch(baseProfile: ResumeProfile, keywords: string[]): Promise<MatchAssessment> {
   const fallback: MatchAssessment = {
     score: 50,
     strong: [],

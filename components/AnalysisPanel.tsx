@@ -1,12 +1,18 @@
 "use client";
 
-import { AnalysisResult } from '@/types';
+import { AnalysisResult, SuggestedProject } from '@/types';
 
 interface AnalysisPanelProps {
-  analysis: AnalysisResult | any[] | null;
+  analysis: AnalysisResult | unknown[] | null;
   isLoading: boolean;
   onSave?: (title: string) => void;
 }
+
+type ToolUseBlock = {
+  type: 'tool_use';
+  name: string;
+  input: unknown;
+};
 
 const Pill: React.FC<{ children: React.ReactNode; variant: 'green' | 'orange' | 'indigo' | 'zinc' }> = ({ children, variant }) => {
   const styles = {
@@ -23,11 +29,11 @@ const Pill: React.FC<{ children: React.ReactNode; variant: 'green' | 'orange' | 
   );
 };
 
-const isToolUseBlock = (block: any): block is any => {
-  return block.type === 'tool_use';
+const isToolUseBlock = (block: unknown): block is ToolUseBlock => {
+  return typeof block === 'object' && block !== null && 'type' in block && (block as { type?: string }).type === 'tool_use';
 };
 
-const getToolInput = <T,>(blocks: any[] | null, name: string): T | null => {
+const getToolInput = <T,>(blocks: unknown[] | null, name: string): T | null => {
   if (!blocks) {
     return null;
   }
@@ -50,13 +56,13 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
   const rawBlocks = Array.isArray(analysis) ? analysis : null;
   const legacyAnalysis = Array.isArray(analysis) ? null : analysis;
   const parsedRole = rawBlocks
-    ? getToolInput<any>(rawBlocks, 'parse_job_description')
+    ? getToolInput<NonNullable<AnalysisResult['parsed']>>(rawBlocks, 'parse_job_description')
     : legacyAnalysis?.parsed;
   const parsedGap = rawBlocks
-    ? getToolInput<any>(rawBlocks, 'analyze_skill_gap')
+    ? getToolInput<NonNullable<AnalysisResult['gap']>>(rawBlocks, 'analyze_skill_gap')
     : legacyAnalysis?.gap;
   const parsedProjects = rawBlocks
-    ? getToolInput<any>(rawBlocks, 'suggest_projects')
+    ? getToolInput<NonNullable<AnalysisResult['projects']>>(rawBlocks, 'suggest_projects')
     : legacyAnalysis?.projects;
 
   if (!parsedRole && !parsedGap && !parsedProjects) {
@@ -175,7 +181,7 @@ const AnalysisPanel: React.FC<AnalysisPanelProps> = ({ analysis, isLoading, onSa
       {/* Card 3: Suggested Projects */}
       {parsedProjects && (
         <div className="space-y-3">
-          {parsedProjects.projects.map((project: any, idx: number) => (
+          {parsedProjects.projects.map((project: SuggestedProject, idx: number) => (
             <div key={idx} className="bg-zinc-900 border border-zinc-800 rounded-lg p-6">
               <div className="mb-3">
                 <div className="flex items-center justify-between mb-2">

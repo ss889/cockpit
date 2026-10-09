@@ -7,7 +7,7 @@ import type { GmailJobCandidate, LocalWorkspace } from "@/types/workspace";
 
 export const GMAIL_READONLY_SCOPE = "https://www.googleapis.com/auth/gmail.readonly";
 const GMAIL_API = "https://gmail.googleapis.com/gmail/v1/users/me";
-const TOKEN_FILE = process.env.JOBOPS_GMAIL_TOKEN_FILE || path.join(os.homedir(), ".jobops", "gmail-token.json");
+const TOKEN_FILE = process.env.JOBOPS_GMAIL_TOKEN_FILE || path.join(/*turbopackIgnore: true*/ os.homedir(), ".jobops", "gmail-token.json");
 
 type GmailToken = {
   accessToken: string;

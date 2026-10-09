@@ -14,12 +14,14 @@ function read() {
   try {
     ensure();
     return JSON.parse(fs.readFileSync(JOBS_FILE, 'utf8') || '{}');
-  } catch (e) {
+  } catch {
     return {};
   }
 }
 
-function write(obj: any) {
+type JobRecord = Record<string, Record<string, unknown>>;
+
+function write(obj: JobRecord) {
   ensure();
   fs.writeFileSync(JOBS_FILE, JSON.stringify(obj, null, 2));
 }
@@ -45,7 +47,7 @@ export function listJobs() {
   return read();
 }
 
-export function saveJobResult(id: string, result: any) {
+export function saveJobResult(id: string, result: unknown) {
   const jobs = read();
   jobs[id] = { ...(jobs[id] || {}), result, updatedAt: new Date().toISOString() };
   write(jobs);
@@ -58,7 +60,7 @@ export function getJobResult(id: string) {
 
 export function listResults() {
   const jobs = read();
-  const out: Record<string, any> = {};
+  const out: Record<string, unknown> = {};
   for (const k of Object.keys(jobs)) {
     if (jobs[k] && jobs[k].result) out[k] = jobs[k].result;
   }
