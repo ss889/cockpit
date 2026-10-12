@@ -47,13 +47,7 @@ export class AnthropicProvider implements LLMProvider {
   }
 
   async generateStructured<T>(input: LLMStructuredRequest<T>): Promise<T> {
-    const text = await this.generateText({
-      ...input,
-      system: `${input.system || ""}\nReturn only valid JSON. Do not include markdown fences or commentary.`,
-    });
-    const parsed = extractJSON(text);
-    if (!input.validate(parsed)) throw new Error(`${this.getProviderName()} returned invalid structured output`);
-    return parsed;
+    return generateStructuredWithRepair(input, this.getProviderName(), (request) => this.generateText(request));
   }
 
   getProviderName(): string { return "anthropic"; }
@@ -95,13 +89,7 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async generateStructured<T>(input: LLMStructuredRequest<T>): Promise<T> {
-    const text = await this.generateText({
-      ...input,
-      system: `${input.system || ""}\nReturn only valid JSON. Do not include markdown fences or commentary.`,
-    });
-    const parsed = extractJSON(text);
-    if (!input.validate(parsed)) throw new Error(`${this.getProviderName()} returned invalid structured output`);
-    return parsed;
+    return generateStructuredWithRepair(input, this.getProviderName(), (request) => this.generateText(request));
   }
 
   getProviderName(): string { return "ollama"; }
@@ -121,4 +109,48 @@ export function getLLMProvider(): LLMProvider {
   return (process.env.LLM_PROVIDER || "anthropic").toLowerCase() === "ollama"
     ? new OllamaProvider()
     : new AnthropicProvider();
+}
+
+async function generateStructuredWithRepair<T>(
+  input: LLMStructuredRequest<T>,
+  providerName: string,
+  generateText: (input: LLMTextRequest) => Promise<string>,
+): Promise<T> {
+  const system = `${input.system || ""}\nReturn only valid JSON. Do not include markdown fences or commentary.`;
+  let prompt = input.prompt;
+  let lastError: unknown;
+
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    const text = await generateText({ ...input, system, prompt });
+    try {
+      const parsed = extractJSON(text);
+      if (!input.validate(parsed)) throw new Error(`${providerName} returned invalid structured output`);
+      return parsed;
+    } catch (error) {
+      lastError = error;
+      prompt = buildRepairPrompt(input.prompt, text, error);
+    }
+  }
+
+  const message = lastError instanceof Error ? lastError.message : "invalid structured output";
+  throw new Error(`${providerName} returned malformed JSON after retry: ${message}`);
+}
+
+function buildRepairPrompt(originalPrompt: string, invalidJson: string, error: unknown): string {
+  const message = error instanceof Error ? error.message : String(error);
+  const clippedOutput = invalidJson.length > 12_000
+    ? `${invalidJson.slice(0, 12_000)}\n...TRUNCATED...`
+    : invalidJson;
+
+  return [
+    "The previous response was not valid JSON and could not be parsed.",
+    `Parser error: ${message}`,
+    "Return the corrected JSON only. Preserve the same schema and do not add markdown fences.",
+    "",
+    "Original task:",
+    originalPrompt,
+    "",
+    "Invalid response to repair:",
+    clippedOutput,
+  ].join("\n");
 }

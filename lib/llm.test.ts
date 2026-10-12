@@ -33,4 +33,22 @@ describe("LLM providers", () => {
     })).rejects.toThrow();
     vi.restoreAllMocks();
   });
+
+  it("retries malformed structured output with a JSON repair prompt", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch")
+      .mockResolvedValueOnce(new Response(JSON.stringify({ response: '{"skills":["TypeScript" "Next.js"]}' }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ response: '{"skills":["TypeScript","Next.js"]}' }), { status: 200 }));
+    const provider = new OllamaProvider("http://127.0.0.1:11434", "test-model");
+
+    const result = await provider.generateStructured<{ skills: string[] }>({
+      prompt: "Extract skills",
+      validate: (value): value is { skills: string[] } =>
+        Boolean(value && typeof value === "object" && Array.isArray((value as { skills?: unknown }).skills)),
+    });
+
+    expect(result.skills).toEqual(["TypeScript", "Next.js"]);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(JSON.parse(fetchMock.mock.calls[1][1]?.body as string).prompt).toContain("could not be parsed");
+    vi.restoreAllMocks();
+  });
 });
